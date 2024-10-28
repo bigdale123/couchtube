@@ -1,0 +1,109 @@
+/* css reset */
+
+html {
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ol,
+ul {
+  margin: 0;
+  padding: 0;
+  font-weight: normal;
+}
+
+ol,
+ul {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* custom styles */
+
+body {
+  background-color: black;
+  width: 100vw;
+  height: 100vh;
+}
+
+.player-wrapper {
+  height: 100%;
+  width: 100%;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+
+  position: relative;
+}
+
+.player {
+  width: 100%;
+  height: auto;
+}
+
+.controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  grid-template-columns: 25px 25px 25px;
+  grid-template-rows: auto;
+  grid-template-areas:
+    'top top top'
+    'channel . volume'
+    'channel . volume'
+    'bottom bottom bottom';
+  gap: 4px;
+
+  padding: 4px;
+  background-color: black;
+}
+
+.control-group {
+  display: flex;
+  gap: 4px;
+}
+
+.control-group > button {
+  width: 25px;
+  height: 25px;
+}
+
+.top-controls {
+  grid-area: top;
+  display: flex;
+}
+
+.channel-controls {
+  grid-area: channel;
+  flex-direction: column;
+}
+
+.volume-controls {
+  grid-area: volume;
+  flex-direction: column;
+}
+
+.bottom-controls {
+  grid-area: bottom;
+}

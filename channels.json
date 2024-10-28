@@ -1,0 +1,21 @@
+{
+  "channels": [
+    {
+      "id": 1,
+      "type": "Education",
+      "videos": [
+        { "url": "https://www.youtube.com/watch?v=TGz4Osgk7AQ" },
+        { "url": "https://www.youtube.com/watch?v=42FhQWQ6SVA" }
+      ]
+    },
+    {
+      "id": 1,
+      "type": "Science",
+      "videos": [
+        { "url": "https://www.youtube.com/watch?v=f8CXG7dS-D0" },
+        { "url": "https://www.youtube.com/watch?v=UYW1lKNVI90" },
+        { "url": "https://www.youtube.com/watch?v=pYeRS5a3HbE" }
+      ]
+    }
+  ]
+}
