@@ -74,7 +74,7 @@ body {
     'channel . volume'
     'bottom bottom bottom';
   gap: 4px;
-
+  z-index: 3;
   padding: 4px;
   background-color: black;
 }
@@ -106,4 +106,17 @@ body {
 
 .bottom-controls {
   grid-area: bottom;
+}
+
+.buffer-gif {
+  position: absolute;
+  z-index: 2;
+  height: 100%;
+  width: 100%;
+  display: none;
+  pointer-events: none;
+}
+
+.buffer-gif.active {
+  display: block;
 }
