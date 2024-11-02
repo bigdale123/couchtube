@@ -1,5 +1,5 @@
 const IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
-const BUFFERING_TIMEOUT = 2000;
+const BUFFERING_TIMEOUT = 3000;
 const CHANNELS_ENDPOINT = '/channels';
 
 class YouTubePlayer {
@@ -12,7 +12,8 @@ class YouTubePlayer {
     this.currentChannel = null;
     this.videoTitle = '';
     this.isPlaying = false;
-    this.isBuffering = true;
+    this.isMuted = true;
+    this.hasInteracted = false;
 
     this.loadYouTubeAPI();
     this.loadChannels();
@@ -35,9 +36,11 @@ class YouTubePlayer {
       autoplay: 1,
       events: {
         onReady: (event) => this.onPlayerReady(event),
-        onStateChange: (event) => this.onPlayerStateChange(event)
+        onStateChange: (event) => this.onPlayerStateChange(event),
+        onAutoplayBlocked: (event) => this.onAutoplayBlocked(event)
       },
       playerVars: {
+        mute: 1,
         controls: 0,
         modestbranding: 1,
         disablekb: 1,
@@ -46,6 +49,8 @@ class YouTubePlayer {
         rel: 0,
         enablejsapi: 1,
         loop: 0,
+        cc_load_policy: 0,
+        playsinline: 1,
         autoplay: 1
       }
     });
@@ -64,35 +69,16 @@ class YouTubePlayer {
   }
 
   onPlayerStateChange(event) {
-    const stateNames = {
-      '-1': 'UNSTARTED',
-      0: 'ENDED',
-      1: 'PLAYING',
-      2: 'PAUSED',
-      3: 'BUFFERING',
-      5: 'CUED'
-    };
-
-    console.log(event);
-
-    console.log(`Current state: ${stateNames[event.data]}`);
-
     const videoTitle = event.target.videoTitle;
     if (videoTitle) this.videoTitle = videoTitle;
 
-    if (event.data === YT.PlayerState.PLAYING) {
-      this.isPlaying = true;
-
-      setTimeout(() => this.deactivateBuffering(), BUFFERING_TIMEOUT);
-      this.player.unMute();
-    } else if (event.data === YT.PlayerState.BUFFERING) {
-      this.activateBuffering();
-    } else if (event.data === YT.PlayerState.PAUSED) {
-      this.isPlaying = false;
-      this.activateBuffering();
-    } else if (event.data === YT.PlayerState.UNSTARTED) {
+    if (event.data === YT.PlayerState.UNSTARTED) {
       this.playVideo();
     }
+  }
+
+  onAutoplayBlocked(event) {
+    console.log('Autoplay was blocked:', event);
   }
 
   playVideo() {
@@ -100,9 +86,18 @@ class YouTubePlayer {
       this.playerReady &&
       this.player.getPlayerState() !== YT.PlayerState.PLAYING
     ) {
-      console.log('Playing video:', this.videoTitle);
-      this.player.mute();
-      this.player.playVideo();
+      if (!this.hasInteracted) {
+        this.player.mute();
+      }
+
+      setTimeout(() => {
+        if (this.hasInteracted && !this.isMuted) {
+          this.player.unMute();
+        }
+        this.player.playVideo();
+
+        this.deactivateBuffering();
+      }, BUFFERING_TIMEOUT);
     }
   }
 
@@ -112,6 +107,7 @@ class YouTubePlayer {
       this.player.getPlayerState() === YT.PlayerState.PLAYING
     ) {
       this.player.pauseVideo();
+      this.activateBuffering();
     }
   }
 
@@ -146,17 +142,11 @@ class YouTubePlayer {
   };
 
   activateBuffering = () => {
-    if (!this.isBuffering) {
-      this.isBuffering = true;
-      this.addBufferingClass();
-      this.player.mute();
-    }
+    this.addBufferingClass();
   };
 
   deactivateBuffering = () => {
-    this.isBuffering = false;
     this.removeBufferingClass();
-    this.player.unMute();
   };
 
   loadChannels() {
@@ -174,16 +164,30 @@ class YouTubePlayer {
     console.log('Loading video ID:', videoId);
 
     if (videoId && this.playerReady) {
-      this.player.loadVideoById(videoId);
+      this.pauseVideo();
+      this.player.cueVideoById(videoId);
+      this.playVideo();
     } else {
       console.error('Player not ready or invalid video ID:', videoId);
+    }
+  }
+
+  toggleMute() {
+    if (this.playerReady) {
+      if (this.player.isMuted()) {
+        this.player.unMute();
+        this.isMuted = false;
+      } else {
+        this.player.mute();
+        this.isMuted = true;
+      }
     }
   }
 
   addControlListeners() {
     document.querySelector('#control-power').addEventListener('click', () => {
       if (this.playerReady) {
-        if (this.isPlaying) {
+        if (this.player.getPlayerState() === YT.PlayerState.PLAYING) {
           this.pauseVideo();
         } else {
           this.playVideo();
@@ -200,9 +204,11 @@ class YouTubePlayer {
     });
 
     document.querySelector('#control-mute').addEventListener('click', () => {
-      if (this.playerReady) {
-        this.player.isMuted() ? this.player.unMute() : this.player.mute();
-      }
+      this.toggleMute();
+    });
+
+    document.querySelector('#controls').addEventListener('click', () => {
+      this.hasInteracted = true;
     });
   }
 }

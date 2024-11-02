@@ -110,13 +110,21 @@ body {
 
 .buffer-gif {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   height: 100%;
   width: 100%;
   display: none;
-  pointer-events: none;
+  background-repeat: repeat;
 }
 
 .buffer-gif.active {
   display: block;
+}
+
+#transparent-overlay {
+  height: 100%;
+  width: 100%;
+  pointer-events: all;
+  z-index: 2;
+  position: absolute;
 }

@@ -7,9 +7,11 @@
     <title>Couchtube</title>
   </head>
   <body>
+    <div id="transparent-overlay"></div>
     <div class="player-wrapper">
+      <img src="/assets/static.gif" id="buffer-gif" class="buffer-gif active" />
       <div id="player"></div>
-      <div class="controls">
+      <div id="controls" class="controls">
         <div class="control-group top-controls">
           <button id="control-power">p</button>
           <button id="control-info">i</button>
@@ -29,8 +31,6 @@
           <button id="control-minimize">x</button>
         </div>
       </div>
-
-      <img src="/assets/static.gif" id="buffer-gif" class="buffer-gif active"></img>
     </div>
 
     <script src="script.js"></script>
