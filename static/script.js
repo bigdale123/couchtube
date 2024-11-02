@@ -16,8 +16,9 @@ class YouTubePlayer {
     this.hasInteracted = false;
 
     this.loadYouTubeAPI();
-    this.loadChannels();
-    this.addControlListeners();
+    this.loadChannels().then(() => {
+      this.addControlListeners();
+    });
   }
 
   loadYouTubeAPI() {
@@ -36,8 +37,7 @@ class YouTubePlayer {
       autoplay: 1,
       events: {
         onReady: (event) => this.onPlayerReady(event),
-        onStateChange: (event) => this.onPlayerStateChange(event),
-        onAutoplayBlocked: (event) => this.onAutoplayBlocked(event)
+        onStateChange: (event) => this.onPlayerStateChange(event)
       },
       playerVars: {
         mute: 1,
@@ -48,9 +48,6 @@ class YouTubePlayer {
         iv_load_policy: 3,
         rel: 0,
         enablejsapi: 1,
-        loop: 0,
-        cc_load_policy: 0,
-        playsinline: 1,
         autoplay: 1
       }
     });
@@ -59,26 +56,28 @@ class YouTubePlayer {
   onPlayerReady(event) {
     this.playerReady = true;
     if (this.channels.length > 0) {
-      const initialChannel = this.channels[0];
-      this.loadChannelVideo(initialChannel);
-      this.currentChannel = initialChannel;
-      event.target.playVideo();
+      this.loadChannelVideo(this.channels[0]);
     } else {
       console.warn('No channels available to load.');
     }
   }
 
-  onPlayerStateChange(event) {
-    const videoTitle = event.target.videoTitle;
-    if (videoTitle) this.videoTitle = videoTitle;
+  onPlayerStateChange({ data, target }) {
+    this.videoTitle = target.videoTitle || this.videoTitle;
 
-    if (event.data === YT.PlayerState.UNSTARTED) {
+    if (data === YT.PlayerState.UNSTARTED) {
       this.playVideo();
     }
   }
 
-  onAutoplayBlocked(event) {
-    console.log('Autoplay was blocked:', event);
+  async loadChannels() {
+    try {
+      const res = await fetch(this.channelsUrl);
+      const data = await res.json();
+      this.channels = data.channels || [];
+    } catch (error) {
+      console.error('Failed to load channels:', error);
+    }
   }
 
   playVideo() {
@@ -86,17 +85,14 @@ class YouTubePlayer {
       this.playerReady &&
       this.player.getPlayerState() !== YT.PlayerState.PLAYING
     ) {
-      if (!this.hasInteracted) {
-        this.player.mute();
-      }
+      if (!this.hasInteracted) this.player.mute();
+
+      this.showBuffering();
 
       setTimeout(() => {
-        if (this.hasInteracted && !this.isMuted) {
-          this.player.unMute();
-        }
+        if (this.hasInteracted && !this.isMuted) this.player.unMute();
+        this.hideBuffering();
         this.player.playVideo();
-
-        this.deactivateBuffering();
       }, BUFFERING_TIMEOUT);
     }
   }
@@ -107,68 +103,7 @@ class YouTubePlayer {
       this.player.getPlayerState() === YT.PlayerState.PLAYING
     ) {
       this.player.pauseVideo();
-      this.activateBuffering();
-    }
-  }
-
-  changeChannel(channel) {
-    this.loadChannelVideo(channel);
-    this.currentChannel = channel;
-  }
-
-  changeChannelByOffset(offset) {
-    const currentIndex = this.channels.findIndex(
-      (channel) => channel.id === this.currentChannel.id
-    );
-    const newIndex =
-      (currentIndex + offset + this.channels.length) % this.channels.length;
-    this.changeChannel(this.channels[newIndex]);
-  }
-
-  nextChannel() {
-    this.changeChannelByOffset(1);
-  }
-
-  previousChannel() {
-    this.changeChannelByOffset(-1);
-  }
-
-  addBufferingClass = () => {
-    document.querySelector('#buffer-gif').classList.add('active');
-  };
-
-  removeBufferingClass = () => {
-    document.querySelector('#buffer-gif').classList.remove('active');
-  };
-
-  activateBuffering = () => {
-    this.addBufferingClass();
-  };
-
-  deactivateBuffering = () => {
-    this.removeBufferingClass();
-  };
-
-  loadChannels() {
-    fetch(this.channelsUrl)
-      .then((res) => res.json())
-      .then((res) => {
-        this.channels = res.channels;
-      });
-  }
-
-  loadChannelVideo(channel) {
-    const videoUrl = channel.videos[0].url;
-    const videoIdMatch = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-    const videoId = videoIdMatch ? videoIdMatch[1] : null;
-    console.log('Loading video ID:', videoId);
-
-    if (videoId && this.playerReady) {
-      this.pauseVideo();
-      this.player.cueVideoById(videoId);
-      this.playVideo();
-    } else {
-      console.error('Player not ready or invalid video ID:', videoId);
+      this.showBuffering();
     }
   }
 
@@ -184,30 +119,70 @@ class YouTubePlayer {
     }
   }
 
+  loadChannelVideo(channel) {
+    const videoUrl = channel.videos[0].url;
+    const videoId = this.extractVideoId(videoUrl);
+    if (videoId && this.playerReady) {
+      this.pauseVideo();
+      this.player.cueVideoById(videoId);
+      this.playVideo();
+      this.currentChannel = channel;
+    } else {
+      console.error('Player not ready or invalid video ID:', videoId);
+    }
+  }
+
+  extractVideoId(url) {
+    const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+    return match ? match[1] : null;
+  }
+
+  changeChannelByOffset(offset) {
+    const currentIndex = this.channels.findIndex(
+      (channel) => channel.id === this.currentChannel.id
+    );
+    const newIndex =
+      (currentIndex + offset + this.channels.length) % this.channels.length;
+    this.loadChannelVideo(this.channels[newIndex]);
+  }
+
+  nextChannel() {
+    this.changeChannelByOffset(1);
+  }
+
+  previousChannel() {
+    this.changeChannelByOffset(-1);
+  }
+
+  showBuffering() {
+    document.querySelector('#buffer-gif')?.classList.add('active');
+  }
+
+  hideBuffering() {
+    document.querySelector('#buffer-gif')?.classList.remove('active');
+  }
+
   addControlListeners() {
-    document.querySelector('#control-power').addEventListener('click', () => {
-      if (this.playerReady) {
+    const controls = {
+      power: () => {
         if (this.player.getPlayerState() === YT.PlayerState.PLAYING) {
           this.pauseVideo();
         } else {
           this.playVideo();
         }
-      }
-    });
+      },
+      chup: () => this.nextChannel(),
+      chdown: () => this.previousChannel(),
+      mute: () => this.toggleMute()
+    };
 
-    document.querySelector('#control-chup').addEventListener('click', () => {
-      this.nextChannel();
-    });
+    for (const [control, handler] of Object.entries(controls)) {
+      document
+        .querySelector(`#control-${control}`)
+        ?.addEventListener('click', handler);
+    }
 
-    document.querySelector('#control-chdown').addEventListener('click', () => {
-      this.previousChannel();
-    });
-
-    document.querySelector('#control-mute').addEventListener('click', () => {
-      this.toggleMute();
-    });
-
-    document.querySelector('#controls').addEventListener('click', () => {
+    document.querySelector('#controls')?.addEventListener('click', () => {
       this.hasInteracted = true;
     });
   }
