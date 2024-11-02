@@ -94,7 +94,6 @@ class YouTubePlayer {
       this.player.getPlayerState() !== YT.PlayerState.PLAYING
     ) {
       if (!this.hasInteracted) this.player.mute();
-
       this.showBuffering();
 
       setTimeout(() => {
@@ -115,20 +114,23 @@ class YouTubePlayer {
     }
   }
 
+  updateIcon(iconId, iconSrc, isActive) {
+    const iconElement = document.querySelector(`#${iconId} .control-icon`);
+    if (iconElement) {
+      iconElement.src = iconSrc;
+      iconElement.classList.toggle('red', isActive);
+    }
+  }
+
   toggleMute() {
     if (this.playerReady) {
-      const muteButton = document.querySelector('#control-mute .control-icon');
-      if (this.player.isMuted()) {
-        this.player.unMute();
-        this.isMuted = false;
-        this.removeRedClassFromIcon('control-mute');
-        muteButton.src = ICONS.volume_high;
-      } else {
-        this.player.mute();
-        this.isMuted = true;
-        this.addRedClassToIcon('control-mute');
-        muteButton.src = ICONS.volume_muted;
-      }
+      this.isMuted = !this.isMuted;
+      this.player[this.isMuted ? 'mute' : 'unMute']();
+      this.updateIcon(
+        'control-mute',
+        this.isMuted ? ICONS.volume_muted : ICONS.volume_high,
+        this.isMuted
+      );
     }
   }
 
@@ -181,7 +183,6 @@ class YouTubePlayer {
     const currentStep = Math.ceil(currentVolume / VOLUME_STEPS);
 
     volumeBar.classList.add('active');
-
     volumeBar.innerHTML = Array.from(
       { length: maxBars },
       (_, index) =>
@@ -191,9 +192,10 @@ class YouTubePlayer {
     ).join('');
 
     clearTimeout(this.volumeBarTimeoutId);
-    this.volumeBarTimeoutId = setTimeout(() => {
-      volumeBar.classList.remove('active');
-    }, VOLUME_BAR_TIMEOUT);
+    this.volumeBarTimeoutId = setTimeout(
+      () => volumeBar.classList.remove('active'),
+      VOLUME_BAR_TIMEOUT
+    );
   }
 
   adjustVolume(increase) {
@@ -216,24 +218,14 @@ class YouTubePlayer {
     this.adjustVolume(false);
   }
 
-  addRedClassToIcon(iconId) {
-    console.log(document.querySelector(`#${iconId} .control-icon`)?.firstChild);
-
-    document.querySelector(`#${iconId} .control-icon`)?.classList.add('red');
-  }
-
-  removeRedClassFromIcon(iconId) {
-    document.querySelector(`#${iconId} .control-icon`)?.classList.remove('red');
-  }
-
   turnOff() {
     this.pauseVideo();
-    this.addRedClassToIcon('control-power');
+    this.updateIcon('control-power', ICONS.power_off, true);
   }
 
   turnOn() {
     this.playVideo();
-    this.removeRedClassFromIcon('control-power');
+    this.updateIcon('control-power', ICONS.power_on, false);
   }
 
   addControlListeners() {
