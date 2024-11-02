@@ -63,30 +63,46 @@ body {
 
 .controls {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  bottom: 25px;
+  right: 25px;
   display: grid;
-  grid-template-columns: 25px 25px 25px;
+  grid-template-columns: 35px 35px 35px;
   grid-template-rows: auto;
   grid-template-areas:
     'top top top'
     'channel . volume'
     'channel . volume'
     'bottom bottom bottom';
-  gap: 4px;
+  gap: 5px;
   z-index: 3;
-  padding: 4px;
+  padding: 5px;
   background-color: black;
+  border-radius: 4px;
 }
 
 .control-group {
   display: flex;
-  gap: 4px;
+  gap: 5px;
 }
 
 .control-group > button {
-  width: 25px;
-  height: 25px;
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.control-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.control-icon.red {
+  /* red filter */
+  filter: brightness(0) saturate(100%) invert(22%) sepia(90%) saturate(3928%)
+    hue-rotate(1deg) brightness(102%) contrast(107%);
 }
 
 .top-controls {

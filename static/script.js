@@ -4,6 +4,11 @@ const CHANNELS_ENDPOINT = '/channels';
 const VOLUME_STEPS = 5;
 const VOLUME_BAR_TIMEOUT = 2000;
 
+const ICONS = {
+  volume_muted: '/assets/icons/volume_muted.svg',
+  volume_high: '/assets/icons/volume_high.svg'
+};
+
 class YouTubePlayer {
   constructor(playerElementId) {
     this.player = null;
@@ -112,12 +117,17 @@ class YouTubePlayer {
 
   toggleMute() {
     if (this.playerReady) {
+      const muteButton = document.querySelector('#control-mute .control-icon');
       if (this.player.isMuted()) {
         this.player.unMute();
         this.isMuted = false;
+        this.removeRedClassFromIcon('control-mute');
+        muteButton.src = ICONS.volume_high;
       } else {
         this.player.mute();
         this.isMuted = true;
+        this.addRedClassToIcon('control-mute');
+        muteButton.src = ICONS.volume_muted;
       }
     }
   }
@@ -206,13 +216,33 @@ class YouTubePlayer {
     this.adjustVolume(false);
   }
 
+  addRedClassToIcon(iconId) {
+    console.log(document.querySelector(`#${iconId} .control-icon`)?.firstChild);
+
+    document.querySelector(`#${iconId} .control-icon`)?.classList.add('red');
+  }
+
+  removeRedClassFromIcon(iconId) {
+    document.querySelector(`#${iconId} .control-icon`)?.classList.remove('red');
+  }
+
+  turnOff() {
+    this.pauseVideo();
+    this.addRedClassToIcon('control-power');
+  }
+
+  turnOn() {
+    this.playVideo();
+    this.removeRedClassFromIcon('control-power');
+  }
+
   addControlListeners() {
     const controls = {
       power: () => {
         if (this.player.getPlayerState() === YT.PlayerState.PLAYING) {
-          this.pauseVideo();
+          this.turnOff();
         } else {
-          this.playVideo();
+          this.turnOn();
         }
       },
       chup: () => this.nextChannel(),
