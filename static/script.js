@@ -2,6 +2,7 @@ const IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
 const BUFFERING_TIMEOUT = 3000;
 const CHANNELS_ENDPOINT = '/channels';
 const VOLUME_STEPS = 5;
+const VOLUME_BAR_TIMEOUT = 2000;
 
 class YouTubePlayer {
   constructor(playerElementId) {
@@ -15,6 +16,7 @@ class YouTubePlayer {
     this.isPlaying = false;
     this.isMuted = true;
     this.hasInteracted = false;
+    this.volumeBarTimeoutId = null;
 
     this.loadYouTubeAPI();
     this.loadChannels().then(() => {
@@ -168,6 +170,8 @@ class YouTubePlayer {
     const maxBars = 100 / VOLUME_STEPS;
     const currentStep = Math.ceil(currentVolume / VOLUME_STEPS);
 
+    volumeBar.classList.add('active');
+
     volumeBar.innerHTML = Array.from(
       { length: maxBars },
       (_, index) =>
@@ -175,24 +179,31 @@ class YouTubePlayer {
           index < currentStep ? 'active' : ''
         }"></div>`
     ).join('');
+
+    clearTimeout(this.volumeBarTimeoutId);
+    this.volumeBarTimeoutId = setTimeout(() => {
+      volumeBar.classList.remove('active');
+    }, VOLUME_BAR_TIMEOUT);
+  }
+
+  adjustVolume(increase) {
+    if (this.playerReady && increase !== undefined) {
+      const currentVolume = this.player.getVolume();
+      const adjustment = increase ? VOLUME_STEPS : -VOLUME_STEPS;
+      const newVolume = Math.min(Math.max(currentVolume + adjustment, 0), 100); // cap between 0 and 100
+
+      this.player.setVolume(newVolume);
+      this.updateVolumeBar(newVolume);
+      this.player.unMute();
+    }
   }
 
   volumeUp() {
-    if (this.playerReady) {
-      const currentVolume = this.player.getVolume();
-      const newVolume = Math.min(currentVolume + VOLUME_STEPS, 100);
-      this.player.setVolume(newVolume);
-      this.updateVolumeBar(newVolume);
-    }
+    this.adjustVolume(true);
   }
 
   volumeDown() {
-    if (this.playerReady) {
-      const currentVolume = this.player.getVolume();
-      const newVolume = Math.max(currentVolume - VOLUME_STEPS, 0);
-      this.player.setVolume(newVolume);
-      this.updateVolumeBar(newVolume);
-    }
+    this.adjustVolume(false);
   }
 
   addControlListeners() {
