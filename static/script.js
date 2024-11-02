@@ -1,6 +1,7 @@
 const IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
 const BUFFERING_TIMEOUT = 3000;
 const CHANNELS_ENDPOINT = '/channels';
+const VOLUME_STEPS = 5;
 
 class YouTubePlayer {
   constructor(playerElementId) {
@@ -162,6 +163,38 @@ class YouTubePlayer {
     document.querySelector('#buffer-gif')?.classList.remove('active');
   }
 
+  updateVolumeBar(currentVolume) {
+    const volumeBar = document.querySelector('#volume-bar');
+    const maxBars = 100 / VOLUME_STEPS;
+    const currentStep = Math.ceil(currentVolume / VOLUME_STEPS);
+
+    volumeBar.innerHTML = Array.from(
+      { length: maxBars },
+      (_, index) =>
+        `<div class="volume-bar-step ${
+          index < currentStep ? 'active' : ''
+        }"></div>`
+    ).join('');
+  }
+
+  volumeUp() {
+    if (this.playerReady) {
+      const currentVolume = this.player.getVolume();
+      const newVolume = Math.min(currentVolume + VOLUME_STEPS, 100);
+      this.player.setVolume(newVolume);
+      this.updateVolumeBar(newVolume);
+    }
+  }
+
+  volumeDown() {
+    if (this.playerReady) {
+      const currentVolume = this.player.getVolume();
+      const newVolume = Math.max(currentVolume - VOLUME_STEPS, 0);
+      this.player.setVolume(newVolume);
+      this.updateVolumeBar(newVolume);
+    }
+  }
+
   addControlListeners() {
     const controls = {
       power: () => {
@@ -173,7 +206,9 @@ class YouTubePlayer {
       },
       chup: () => this.nextChannel(),
       chdown: () => this.previousChannel(),
-      mute: () => this.toggleMute()
+      mute: () => this.toggleMute(),
+      volup: () => this.volumeUp(),
+      voldown: () => this.volumeDown()
     };
 
     for (const [control, handler] of Object.entries(controls)) {

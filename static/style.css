@@ -128,3 +128,29 @@ body {
   z-index: 2;
   position: absolute;
 }
+
+#volume-bar {
+  position: absolute;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  height: 70px;
+  bottom: 100px;
+  z-index: 3;
+  gap: 3px;
+  width: 75%;
+  max-width: 500px;
+}
+
+.volume-bar-step {
+  width: 20px;
+  height: 100%;
+  background-color: green;
+  visibility: hidden;
+}
+
+.volume-bar-step.active {
+  visibility: visible;
+}
