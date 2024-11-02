@@ -5,6 +5,7 @@ const VOLUME_STEPS = 5;
 const VOLUME_BAR_TIMEOUT = 2000;
 
 const ICONS = {
+  power: '/assets/icons/power.svg',
   volume_muted: '/assets/icons/volume_muted.svg',
   volume_high: '/assets/icons/volume_high.svg'
 };
@@ -220,12 +221,12 @@ class YouTubePlayer {
 
   turnOff() {
     this.pauseVideo();
-    this.updateIcon('control-power', ICONS.power_off, true);
+    this.updateIcon('control-power', ICONS.power, true);
   }
 
   turnOn() {
     this.playVideo();
-    this.updateIcon('control-power', ICONS.power_on, false);
+    this.updateIcon('control-power', ICONS.power, false);
   }
 
   addControlListeners() {
@@ -253,6 +254,24 @@ class YouTubePlayer {
     document.querySelector('#controls')?.addEventListener('click', () => {
       this.hasInteracted = true;
     });
+
+    document
+      .querySelector('#control-fullscreen')
+      ?.addEventListener('click', () => {
+        const playerElement = document.querySelector('#player');
+
+        console.log(playerElement);
+
+        const requestFullScreen =
+          playerElement.requestFullscreen ||
+          playerElement.mozRequestFullScreen ||
+          playerElement.webkitRequestFullScreen ||
+          playerElement.msRequestFullscreen;
+
+        if (requestFullScreen) {
+          requestFullScreen.call(playerElement);
+        }
+      });
   }
 }
 
