@@ -1,0 +1,21 @@
+# Ignore Go build files
+bin/
+obj/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Ignore Go test binaries
+*.test
+
+# Ignore Go dependency directories
+vendor/
+Godeps/
+
+# Ignore Go workspace file
+*.code-workspace
+
+# Ignore database files
+*.db

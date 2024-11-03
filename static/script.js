@@ -1,6 +1,7 @@
 const IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
 const BUFFERING_TIMEOUT = 3000;
 const CHANNELS_ENDPOINT = '/channels';
+const CURRENT_VIDEO_ENDPOINT = '/current-video';
 const VOLUME_STEPS = 5;
 const VOLUME_BAR_TIMEOUT = 2000;
 
@@ -16,6 +17,7 @@ class YouTubePlayer {
     this.playerReady = false;
     this.playerElementId = playerElementId;
     this.channelsUrl = CHANNELS_ENDPOINT;
+    this.currentVideoEndpoint = CURRENT_VIDEO_ENDPOINT;
     this.channels = [];
     this.currentChannel = null;
     this.videoTitle = '';
@@ -89,6 +91,19 @@ class YouTubePlayer {
     }
   }
 
+  async getCurrentVideo(channelId) {
+    try {
+      const res = await fetch(
+        `${this.currentVideoEndpoint}?channel-id=${channelId}`
+      );
+      const data = await res.json();
+      if (data.video) return data.video;
+      return null;
+    } catch (error) {
+      console.error('Failed to load channels:', error);
+    }
+  }
+
   playVideo() {
     if (
       this.playerReady &&
@@ -135,8 +150,15 @@ class YouTubePlayer {
     }
   }
 
-  loadChannelVideo(channel) {
-    const videoUrl = channel.videos[0].url;
+  async loadChannelVideo(channel) {
+    const video = await this.getCurrentVideo(channel.id);
+
+    if (!video) {
+      console.error('No video found for channel:', channel);
+      return;
+    }
+
+    const videoUrl = video.url;
     const videoId = this.extractVideoId(videoUrl);
     if (videoId && this.playerReady) {
       this.pauseVideo();

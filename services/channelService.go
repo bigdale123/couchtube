@@ -1,41 +1,49 @@
 package services
 
 import (
-	"encoding/json"
-	"io"
-	"log"
-	"os"
-
-	"github.com/ozencb/couchtube/models"
+	"github.com/ozencb/couchtube/db"
+	dbmodels "github.com/ozencb/couchtube/models/db"
+	repo "github.com/ozencb/couchtube/repositories"
 )
 
-func GetChannels() ([]models.Channel, error) {
-	wd, err := os.Getwd()
+func GetChannels() ([]dbmodels.Channel, error) {
+
+	db, err := db.GetConnector()
 
 	if err != nil {
-		log.Printf("Failed to get working directory: %v", err)
 		return nil, err
 	}
 
-	filePath := wd + "/channels.json"
-	jsonFile, err := os.Open(filePath)
+	repo := repo.NewChannelRepository(db)
+
+	channels, err := repo.GetChannels()
+
 	if err != nil {
-		log.Printf("Failed to open file %s: %v", filePath, err)
 		return nil, err
 	}
-	defer jsonFile.Close()
 
-	byteValue, err := io.ReadAll(jsonFile)
+	return channels, nil
+}
+
+func GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
+
+	db, err := db.GetConnector()
+
 	if err != nil {
-		log.Printf("Failed to read file %s: %v", filePath, err)
 		return nil, err
 	}
 
-	var channelsWrapper models.Channels
-	if err := json.Unmarshal(byteValue, &channelsWrapper); err != nil {
-		log.Printf("Failed to parse JSON: %v", err)
+	repo := repo.NewVideoRepository(db)
+
+	videos, err := repo.GetVideosByChannelID(channelId)
+
+	if err != nil {
 		return nil, err
 	}
 
-	return channelsWrapper.Channels, nil
+	if len(videos) == 0 {
+		return nil, nil
+	}
+
+	return &videos[0], nil
 }

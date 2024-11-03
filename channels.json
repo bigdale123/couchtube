@@ -1,20 +1,38 @@
 {
   "channels": [
     {
-      "id": 1,
-      "type": "Education",
+      "name": "Education",
       "videos": [
-        { "url": "https://www.youtube.com/watch?v=TGz4Osgk7AQ" },
-        { "url": "https://www.youtube.com/watch?v=42FhQWQ6SVA" }
+        {
+          "url": "https://www.youtube.com/watch?v=TGz4Osgk7AQ",
+          "segment_start": 10,
+          "segment_end": 30
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=42FhQWQ6SVA",
+          "segment_start": 4,
+          "segment_end": 40
+        }
       ]
     },
     {
-      "id": 2,
-      "type": "Science",
+      "name": "Science",
       "videos": [
-        { "url": "https://www.youtube.com/watch?v=f8CXG7dS-D0" },
-        { "url": "https://www.youtube.com/watch?v=UYW1lKNVI90" },
-        { "url": "https://www.youtube.com/watch?v=pYeRS5a3HbE" }
+        {
+          "url": "https://www.youtube.com/watch?v=f8CXG7dS-D0",
+          "segment_start": 30,
+          "segment_end": 300
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=UYW1lKNVI90",
+          "segment_start": 80,
+          "segment_end": 70
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=pYeRS5a3HbE",
+          "segment_start": 100,
+          "segment_end": 30
+        }
       ]
     }
   ]
