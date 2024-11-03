@@ -33,7 +33,5 @@ func GetConnector() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	defer db.Close()
-
 	return db, nil
 }
