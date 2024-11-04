@@ -16,7 +16,7 @@ func InitTables() {
 	}
 	defer db.Close()
 
-	createVideosTable := `CREATE TABLE IF NOT EXISTS videos (
+	createVideosTableQuery := `CREATE TABLE IF NOT EXISTS videos (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
 		"channel_id" INTEGER NOT NULL,
 		"url" TEXT NOT NULL,
@@ -26,19 +26,20 @@ func InitTables() {
 		FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
 	);`
 
-	createChannelsTable := `CREATE TABLE IF NOT EXISTS channels (
+	createChannelsTableQuery := `CREATE TABLE IF NOT EXISTS channels (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-		"name" TEXT
+		"name" TEXT,
+		UNIQUE(name)
 	);`
 
-	createIndexes := `CREATE INDEX IF NOT EXISTS idx_videos_channel_id ON videos(channel_id);`
+	createIndexesQuery := `CREATE INDEX IF NOT EXISTS idx_videos_channel_id ON videos(channel_id);`
 
-	_, err = db.Exec(createChannelsTable + createVideosTable + createIndexes)
+	_, err = db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println("Database initialized and table created successfully.")
+	log.Println("Database initialized and tables created successfully.")
 }
 
 func PopulateDatabase() {
@@ -53,50 +54,64 @@ func PopulateDatabase() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer db.Close()
 
-	insertChannel := `INSERT INTO channels (name) VALUES (?) RETURNING id`
-	insertVideo := `INSERT INTO videos (channel_id, url, segment_start, segment_end) VALUES (?, ?, ?, ?)`
+	insertChannelQuery := `INSERT OR IGNORE INTO channels (name) VALUES (?)`
+	insertVideoQuery := `INSERT OR IGNORE INTO videos (channel_id, url, segment_start, segment_end) VALUES (?, ?, ?, ?)`
 
 	tx, err := db.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stmt, err := tx.Prepare(insertChannel)
-	if err != nil {
-		log.Fatal(err)
-	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
 
 	for _, channel := range channels.Channels {
-		result, err := stmt.Exec(channel.Name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		channelId, err := result.LastInsertId()
-		if err != nil {
-			log.Fatal(err)
-		}
+		channelID, err := insertOrGetChannelID(tx, channel.Name, insertChannelQuery)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		for _, video := range channel.Videos {
-			_, err = tx.Exec(insertVideo, channelId, video.Url, video.SegmentStart, video.SegmentEnd)
+			_, err = tx.Exec(insertVideoQuery, channelID, video.Url, video.SegmentStart, video.SegmentEnd)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 	}
 
-	stmt.Close()
-
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		log.Fatal(err)
 	}
 
 	log.Println("Data inserted successfully.")
+}
 
+func insertOrGetChannelID(tx *sql.Tx, name, query string) (int64, error) {
+	result, err := tx.Exec(query, name)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	if rowsAffected > 0 {
+		return result.LastInsertId()
+	}
+
+	var existingID int64
+	getIDQuery := `SELECT id FROM channels WHERE name = ?`
+	err = tx.QueryRow(getIDQuery, name).Scan(&existingID)
+	if err != nil {
+		return 0, err
+	}
+
+	return existingID, nil
 }
