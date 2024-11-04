@@ -23,7 +23,8 @@ func InitTables() {
 		"segment_start" INTEGER NOT NULL,
 		"segment_end" INTEGER NOT NULL,
 		UNIQUE(url, channel_id),
-		FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
+		FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+		CHECK (segment_end > segment_start)
 	);`
 
 	createChannelsTableQuery := `CREATE TABLE IF NOT EXISTS channels (
