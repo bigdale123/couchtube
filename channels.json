@@ -21,16 +21,16 @@
         {
           "url": "https://www.youtube.com/watch?v=f8CXG7dS-D0",
           "segment_start": 30,
-          "segment_end": 300
+          "segment_end": 50
         },
         {
           "url": "https://www.youtube.com/watch?v=UYW1lKNVI90",
-          "segment_start": 80,
+          "segment_start": 50,
           "segment_end": 70
         },
         {
           "url": "https://www.youtube.com/watch?v=pYeRS5a3HbE",
-          "segment_start": 100,
+          "segment_start": 10,
           "segment_end": 30
         }
       ]
