@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	dbmodels "github.com/ozencb/couchtube/models/db"
 	"github.com/ozencb/couchtube/services"
 )
 
@@ -42,10 +43,28 @@ func GetCurrentVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	video, err := services.GetCurrentVideoByChannelId(channelIDInt)
-	if err != nil {
-		http.Error(w, "Failed to load video", http.StatusInternalServerError)
+	videoID := r.URL.Query().Get("video-id")
+
+	var video *dbmodels.Video
+	// if videoId is provided, call GetNextVideo
+	if videoID != "" {
+		videoIDInt, err := strconv.Atoi(videoID)
+		if err != nil {
+			http.Error(w, "Invalid video-id", http.StatusBadRequest)
+			return
+		}
+		video = services.GetNextVideo(channelIDInt, videoIDInt)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{"video": video})
 		return
+	} else {
+		// if videoId is not provided, call GetCurrentVideoByChannelId
+		video, err = services.GetCurrentVideoByChannelId(channelIDInt)
+		if err != nil {
+			http.Error(w, "Failed to load video", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

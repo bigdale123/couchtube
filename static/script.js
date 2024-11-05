@@ -25,6 +25,7 @@ class YouTubePlayer {
     this.isMuted = true;
     this.hasInteracted = false;
     this.volumeBarTimeoutId = null;
+    this.currentVideo = null;
 
     this.loadYouTubeAPI();
     this.loadChannels().then(() => {
@@ -79,6 +80,18 @@ class YouTubePlayer {
     if (data === YT.PlayerState.UNSTARTED) {
       this.playVideo();
     }
+
+    if (data === YT.PlayerState.PLAYING) {
+      const intervalId = setInterval(async () => {
+        const currentTime = this.player.getCurrentTime();
+
+        // If current time reaches or exceeds the end time, load the next video
+        if (currentTime >= this.currentVideo.segmentEnd) {
+          clearInterval(intervalId);
+          await this.loadChannelVideo(this.currentChannel, this.currentVideo);
+        }
+      }, 1000);
+    }
   }
 
   async loadChannels() {
@@ -91,11 +104,13 @@ class YouTubePlayer {
     }
   }
 
-  async getCurrentVideo(channelId) {
+  async getCurrentVideo(channelId, videoId) {
     try {
-      const res = await fetch(
-        `${this.currentVideoEndpoint}?channel-id=${channelId}`
-      );
+      // non-null videoId means we're looking for the next video
+      const url = `${this.currentVideoEndpoint}?channel-id=${channelId}${
+        videoId ? `&video-id=${videoId}` : ''
+      }`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.video) return data.video;
       return null;
@@ -150,19 +165,27 @@ class YouTubePlayer {
     }
   }
 
-  async loadChannelVideo(channel) {
-    const video = await this.getCurrentVideo(channel.id);
+  async loadChannelVideo(channel, currentVideo = null) {
+    const videoToBePlayed = await this.getCurrentVideo(
+      channel.id,
+      currentVideo?.id
+    );
 
-    if (!video) {
+    if (!videoToBePlayed) {
       console.error('No video found for channel:', channel);
       return;
     }
 
-    const videoUrl = video.url;
+    this.currentVideo = videoToBePlayed;
+    const videoUrl = videoToBePlayed.url;
     const videoId = this.extractVideoId(videoUrl);
+
     if (videoId && this.playerReady) {
       this.pauseVideo();
-      this.player.cueVideoById({ videoId, startSeconds: video.segmentStart });
+      this.player.cueVideoById({
+        videoId,
+        startSeconds: videoToBePlayed.segmentStart
+      });
 
       this.playVideo();
       this.currentChannel = channel;

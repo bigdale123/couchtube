@@ -3,20 +3,13 @@ package services
 import (
 	"time"
 
-	"github.com/ozencb/couchtube/db"
 	dbmodels "github.com/ozencb/couchtube/models/db"
 	repo "github.com/ozencb/couchtube/repositories"
 )
 
 func GetChannels() ([]dbmodels.Channel, error) {
 
-	db, err := db.GetConnector()
-
-	if err != nil {
-		return nil, err
-	}
-
-	repo := repo.NewChannelRepository(db)
+	repo := repo.NewChannelRepository()
 
 	channels, err := repo.GetChannels()
 
@@ -29,13 +22,7 @@ func GetChannels() ([]dbmodels.Channel, error) {
 
 func GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
 
-	db, err := db.GetConnector()
-
-	if err != nil {
-		return nil, err
-	}
-
-	repo := repo.NewVideoRepository(db)
+	repo := repo.NewVideoRepository()
 
 	videos, err := repo.GetVideosByChannelID(channelId)
 
@@ -61,7 +48,7 @@ func GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
 	// find the video to be played and update the segment start time
 	for _, video := range videos {
 		totalLengthInSeconds -= video.SegmentEnd - video.SegmentStart
-		if totalLengthInSeconds <= indexSeconds {
+		if totalLengthInSeconds <= indexSeconds && indexSeconds < (video.SegmentEnd-video.SegmentStart) {
 			if indexSeconds > 0 {
 				video.SegmentStart = video.SegmentStart + indexSeconds // wind the video forward to the correct position
 			}
@@ -72,4 +59,16 @@ func GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
 	println("No video found to play")
 
 	return &videos[0], nil
+}
+
+func GetNextVideo(channelId int, videoId int) *dbmodels.Video {
+	repo := repo.NewVideoRepository()
+
+	video, err := repo.GetNextVideo(channelId, videoId)
+	if err != nil {
+		return nil
+	}
+
+	return video
+
 }

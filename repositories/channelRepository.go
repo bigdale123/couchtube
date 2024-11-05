@@ -3,6 +3,7 @@ package repo
 import (
 	"database/sql"
 
+	"github.com/ozencb/couchtube/db"
 	dbmodels "github.com/ozencb/couchtube/models/db"
 )
 
@@ -14,7 +15,12 @@ type channelRepository struct {
 	db *sql.DB
 }
 
-func NewChannelRepository(db *sql.DB) ChannelRepository {
+func NewChannelRepository() ChannelRepository {
+	db, err := db.GetConnector()
+
+	if err != nil {
+		panic(err)
+	}
 	return &channelRepository{db: db}
 }
 
