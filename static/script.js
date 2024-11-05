@@ -26,6 +26,7 @@ class YouTubePlayer {
     this.hasInteracted = false;
     this.volumeBarTimeoutId = null;
     this.currentVideo = null;
+    this.isControlGroupMinimized = false;
 
     this.loadYouTubeAPI();
     this.loadChannels().then(() => {
@@ -275,6 +276,38 @@ class YouTubePlayer {
     this.updateIcon('control-power', ICONS.power, false);
   }
 
+  toggleFullscreen() {
+    const playerElement = document.querySelector('#player');
+
+    console.log(playerElement);
+
+    const requestFullScreen =
+      playerElement.requestFullscreen ||
+      playerElement.mozRequestFullScreen ||
+      playerElement.webkitRequestFullScreen ||
+      playerElement.msRequestFullscreen;
+
+    if (requestFullScreen) {
+      requestFullScreen.call(playerElement);
+    }
+  }
+
+  toggleControlGroup() {
+    const controlGroup = document.querySelector('#controls');
+    const minimizeIcon = document.querySelector(
+      '#control-minimize .control-icon'
+    );
+
+    this.isControlGroupMinimized = !this.isControlGroupMinimized;
+    controlGroup.classList.toggle('minimized', this.isControlGroupMinimized);
+    minimizeIcon.src = this.isControlGroupMinimized
+      ? '/assets/icons/expand.svg'
+      : '/assets/icons/contract.svg';
+
+    // toggle control group class
+    controlGroup.classList.toggle('minimized', this.isControlGroupMinimized);
+  }
+
   addControlListeners() {
     const controls = {
       power: () => {
@@ -304,19 +337,13 @@ class YouTubePlayer {
     document
       .querySelector('#control-fullscreen')
       ?.addEventListener('click', () => {
-        const playerElement = document.querySelector('#player');
+        this.toggleFullscreen();
+      });
 
-        console.log(playerElement);
-
-        const requestFullScreen =
-          playerElement.requestFullscreen ||
-          playerElement.mozRequestFullScreen ||
-          playerElement.webkitRequestFullScreen ||
-          playerElement.msRequestFullscreen;
-
-        if (requestFullScreen) {
-          requestFullScreen.call(playerElement);
-        }
+    document
+      .querySelector('#control-minimize')
+      ?.addEventListener('click', (event) => {
+        this.toggleControlGroup();
       });
   }
 }

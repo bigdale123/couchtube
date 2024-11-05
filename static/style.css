@@ -1,4 +1,9 @@
-/* css reset */
+:root {
+  --background-color: #000;
+  --primary-color: #f8f9fa;
+  --secondary-color: #212529;
+  --tertiary-color: #00ff01;
+}
 
 html {
   box-sizing: border-box;
@@ -36,10 +41,8 @@ img {
   height: auto;
 }
 
-/* custom styles */
-
 body {
-  background-color: black;
+  background-color: var(--background-color);
   width: 100vw;
   height: 100vh;
 }
@@ -76,7 +79,7 @@ body {
   gap: 5px;
   z-index: 3;
   padding: 5px;
-  background-color: black;
+  background-color: var(--primary-color);
   border-radius: 4px;
 }
 
@@ -92,11 +95,26 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: var(--secondary-color);
+  border: 0;
+  box-shadow: none;
+  border-radius: 5px;
+}
+
+.controls.minimized {
+  display: flex;
+  gap: 0;
+}
+
+.controls.minimized button:not(#control-minimize) {
+  display: none;
 }
 
 .control-icon {
   width: 15px;
   height: 15px;
+  filter: brightness(0) saturate(100%) invert(100%) sepia(30%) saturate(1694%)
+    hue-rotate(170deg) brightness(106%) contrast(107%);
 }
 
 .control-icon.red {
@@ -169,7 +187,7 @@ body {
 .volume-bar-step {
   width: 20px;
   height: 100%;
-  background-color: green;
+  background-color: var(--tertiary-color);
   visibility: hidden;
 }
 
