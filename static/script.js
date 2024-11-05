@@ -1,9 +1,10 @@
 const IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
-const BUFFERING_TIMEOUT = 3000;
+const BUFFERING_TIMEOUT = 3500;
 const CHANNELS_ENDPOINT = '/channels';
 const CURRENT_VIDEO_ENDPOINT = '/current-video';
 const VOLUME_STEPS = 5;
 const VOLUME_BAR_TIMEOUT = 2000;
+const CHANNEL_NAME_TIMEOUT = 3000;
 
 const ICONS = {
   power: '/assets/icons/power.svg',
@@ -167,6 +168,13 @@ class YouTubePlayer {
   }
 
   async loadChannelVideo(channel, currentVideo = null) {
+    if (!channel) {
+      console.error('No channel found');
+      return;
+    }
+
+    this.updateChannelName(channel);
+
     const videoToBePlayed = await this.getCurrentVideo(
       channel.id,
       currentVideo?.id
@@ -206,7 +214,10 @@ class YouTubePlayer {
     );
     const newIndex =
       (currentIndex + offset + this.channels.length) % this.channels.length;
-    this.loadChannelVideo(this.channels[newIndex]);
+    const newChannel = this.channels[newIndex];
+    this.loadChannelVideo(newChannel);
+
+    this.toggleChannelNameVisibility();
   }
 
   nextChannel() {
@@ -223,6 +234,24 @@ class YouTubePlayer {
 
   hideBuffering() {
     document.querySelector('#buffer-gif')?.classList.remove('active');
+  }
+
+  updateChannelName(channel) {
+    const channelId = channel.id.toString().padStart(2, '0');
+    const channelName = `${channel.name} - ${channelId}`;
+    const channelNameElement = document.querySelector('#channel-name');
+    channelNameElement.innerHTML = channelName;
+  }
+
+  toggleChannelNameVisibility() {
+    const channelNameElement = document.querySelector('#channel-name');
+    channelNameElement.classList.add('active');
+
+    clearTimeout(this.channelNameTimeoutId);
+    this.channelNameTimeoutId = setTimeout(
+      () => channelNameElement.classList.remove('active'),
+      CHANNEL_NAME_TIMEOUT
+    );
   }
 
   updateVolumeBar(currentVolume) {

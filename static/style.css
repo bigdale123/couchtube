@@ -45,6 +45,10 @@ body {
   background-color: var(--background-color);
   width: 100vw;
   height: 100vh;
+
+  font-family: 'VT323', monospace;
+  font-weight: 400;
+  font-style: normal;
 }
 
 .player-wrapper {
@@ -59,12 +63,22 @@ body {
   position: relative;
 }
 
-.player {
-  width: 100%;
-  height: auto;
+#channel-name {
+  position: absolute;
+  top: 15px;
+  left: 25px;
+  z-index: 3;
+  color: var(--tertiary-color);
+  font-size: 5rem;
+  line-height: 1;
+  display: none;
 }
 
-.controls {
+#channel-name.active {
+  display: block;
+}
+
+#controls {
   position: absolute;
   bottom: 25px;
   right: 25px;
