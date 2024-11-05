@@ -162,7 +162,8 @@ class YouTubePlayer {
     const videoId = this.extractVideoId(videoUrl);
     if (videoId && this.playerReady) {
       this.pauseVideo();
-      this.player.cueVideoById(videoId);
+      this.player.cueVideoById({ videoId, startSeconds: video.segmentStart });
+
       this.playVideo();
       this.currentChannel = channel;
     } else {
