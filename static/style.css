@@ -115,12 +115,12 @@ body {
   border-radius: 5px;
 }
 
-.controls.minimized {
+#controls.minimized {
   display: flex;
   gap: 0;
 }
 
-.controls.minimized button:not(#control-minimize) {
+#controls.minimized button:not(#control-minimize) {
   display: none;
 }
 

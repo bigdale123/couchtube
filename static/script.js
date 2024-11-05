@@ -5,376 +5,324 @@ const CURRENT_VIDEO_ENDPOINT = '/current-video';
 const VOLUME_STEPS = 5;
 const VOLUME_BAR_TIMEOUT = 2000;
 const CHANNEL_NAME_TIMEOUT = 3000;
+const INTERVAL_CHECK_MS = 1000;
 
 const ICONS = {
   power: '/assets/icons/power.svg',
   volume_muted: '/assets/icons/volume_muted.svg',
-  volume_high: '/assets/icons/volume_high.svg'
+  volume_high: '/assets/icons/volume_high.svg',
+  expand: '/assets/icons/expand.svg',
+  contract: '/assets/icons/contract.svg'
 };
 
-class YouTubePlayer {
-  constructor(playerElementId) {
-    this.player = null;
-    this.playerReady = false;
-    this.playerElementId = playerElementId;
-    this.channelsUrl = CHANNELS_ENDPOINT;
-    this.currentVideoEndpoint = CURRENT_VIDEO_ENDPOINT;
-    this.channels = [];
-    this.currentChannel = null;
-    this.videoTitle = '';
-    this.isPlaying = false;
-    this.isMuted = true;
-    this.hasInteracted = false;
-    this.volumeBarTimeoutId = null;
-    this.currentVideo = null;
-    this.isControlGroupMinimized = false;
+const loadYouTubeAPI = (onReady) => {
+  const tag = document.createElement('script');
+  tag.src = IFRAME_API_URL;
+  document.head.appendChild(tag);
+  window.onYouTubeIframeAPIReady = onReady;
+};
 
-    this.loadYouTubeAPI();
-    this.loadChannels().then(() => {
-      this.addControlListeners();
-    });
-  }
-
-  loadYouTubeAPI() {
-    const tag = document.createElement('script');
-    tag.src = IFRAME_API_URL;
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-    window.onYouTubeIframeAPIReady = () => this.onYouTubeIframeAPIReady();
-  }
-
-  onYouTubeIframeAPIReady() {
-    this.player = new YT.Player(this.playerElementId, {
-      width: '100%',
-      height: '100%',
-      autoplay: 1,
-      events: {
-        onReady: (event) => this.onPlayerReady(event),
-        onStateChange: (event) => this.onPlayerStateChange(event)
-      },
-      playerVars: {
-        mute: 1,
-        controls: 0,
-        modestbranding: 1,
-        disablekb: 1,
-        fs: 0,
-        iv_load_policy: 3,
-        rel: 0,
-        enablejsapi: 1,
-        autoplay: 1
-      }
-    });
-  }
-
-  onPlayerReady(event) {
-    this.playerReady = true;
-    if (this.channels.length > 0) {
-      this.loadChannelVideo(this.channels[0]);
-    } else {
-      console.warn('No channels available to load.');
+const initializePlayer = (playerElementId, onReady, onStateChange) => {
+  return new YT.Player(playerElementId, {
+    width: '100%',
+    height: '100%',
+    autoplay: 1,
+    events: { onReady, onStateChange },
+    playerVars: {
+      mute: 1,
+      controls: 0,
+      modestbranding: 1,
+      disablekb: 1,
+      fs: 0,
+      iv_load_policy: 3,
+      rel: 0,
+      enablejsapi: 1,
+      autoplay: 1
     }
-  }
+  });
+};
 
-  onPlayerStateChange({ data, target }) {
-    this.videoTitle = target.videoTitle || this.videoTitle;
+const fetchChannels = async () => {
+  const res = await fetch(CHANNELS_ENDPOINT);
+  const data = await res.json();
+  return data.channels || [];
+};
 
-    if (data === YT.PlayerState.UNSTARTED) {
-      this.playVideo();
+const fetchCurrentVideo = async (channelId, videoId) => {
+  const url = `${CURRENT_VIDEO_ENDPOINT}?channel-id=${channelId}${
+    videoId ? `&video-id=${videoId}` : ''
+  }`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return data.video || null;
+};
+
+const extractVideoId = (url) => {
+  const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+  return match ? match[1] : null;
+};
+
+const showBuffering = () => {
+  document.querySelector('#buffer-gif')?.classList.add('active');
+};
+
+const hideBuffering = () => {
+  document.querySelector('#buffer-gif')?.classList.remove('active');
+};
+
+const deactiveBuffering = (state) => {
+  const { player } = state;
+
+  // make sure that the player is muted so that it does not play sound
+  // when buffering is active
+  player.mute();
+
+  setTimeout(() => {
+    hideBuffering();
+    if (state.isInteracted && !state.isMuted) {
+      // browsers prevent autoplay without user interaction
+      // unmute if it was not muted before
+      player.unMute();
+      state.isMuted = false;
     }
+    setControlIcon('control-power', ICONS.power, false);
+  }, BUFFERING_TIMEOUT);
+};
 
-    if (data === YT.PlayerState.PLAYING) {
-      const intervalId = setInterval(async () => {
-        const currentTime = this.player.getCurrentTime();
-
-        // If current time reaches or exceeds the end time, load the next video
-        if (currentTime >= this.currentVideo.segmentEnd) {
-          clearInterval(intervalId);
-          await this.loadChannelVideo(this.currentChannel, this.currentVideo);
-        }
-      }, 1000);
-    }
+const setControlIcon = (iconId, iconSrc, isActive) => {
+  const iconElement = document.querySelector(`#${iconId} .control-icon`);
+  if (iconElement) {
+    iconElement.src = iconSrc;
+    iconElement.classList.toggle('red', isActive);
   }
+};
 
-  async loadChannels() {
-    try {
-      const res = await fetch(this.channelsUrl);
-      const data = await res.json();
-      this.channels = data.channels || [];
-    } catch (error) {
-      console.error('Failed to load channels:', error);
-    }
+const toggleMute = (player, isMuted) => {
+  player[isMuted ? 'unMute' : 'mute']();
+  setControlIcon(
+    'control-mute',
+    isMuted ? ICONS.volume_high : ICONS.volume_muted,
+    !isMuted
+  );
+  return !isMuted;
+};
+
+const updateVolumeBar = (currentVolume) => {
+  const volumeBar = document.querySelector('#volume-bar');
+  if (!volumeBar) return;
+
+  const maxBars = 100 / VOLUME_STEPS;
+  const currentStep = Math.ceil(currentVolume / VOLUME_STEPS);
+
+  volumeBar.classList.add('active');
+  volumeBar.innerHTML = Array.from(
+    { length: maxBars },
+    (_, index) =>
+      `<div class="volume-bar-step ${
+        index < currentStep ? 'active' : ''
+      }"></div>`
+  ).join('');
+
+  setTimeout(() => volumeBar.classList.remove('active'), VOLUME_BAR_TIMEOUT);
+};
+
+const toggleFullscreen = (playerElementId) => {
+  const playerElement = document.getElementById(playerElementId);
+  const requestFullScreen =
+    playerElement.requestFullscreen ||
+    playerElement.mozRequestFullScreen ||
+    playerElement.webkitRequestFullScreen ||
+    playerElement.msRequestFullscreen;
+  if (requestFullScreen) {
+    requestFullScreen.call(playerElement);
   }
+};
 
-  async getCurrentVideo(channelId, videoId) {
-    try {
-      // non-null videoId means we're looking for the next video
-      const url = `${this.currentVideoEndpoint}?channel-id=${channelId}${
-        videoId ? `&video-id=${videoId}` : ''
-      }`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.video) return data.video;
-      return null;
-    } catch (error) {
-      console.error('Failed to load channels:', error);
-    }
-  }
+const toggleControlGroup = (isMinimized) => {
+  const controlGroup = document.querySelector('#controls');
+  const minimizeIcon = document.querySelector(
+    '#control-minimize .control-icon'
+  );
 
-  playVideo() {
-    if (
-      this.playerReady &&
-      this.player.getPlayerState() !== YT.PlayerState.PLAYING
-    ) {
-      if (!this.hasInteracted) this.player.mute();
-      this.showBuffering();
+  isMinimized = !isMinimized;
+  controlGroup.classList.toggle('minimized', isMinimized);
+  minimizeIcon.src = isMinimized ? ICONS.expand : ICONS.contract;
 
-      setTimeout(() => {
-        if (this.hasInteracted && !this.isMuted) this.player.unMute();
-        this.hideBuffering();
-        this.player.playVideo();
-      }, BUFFERING_TIMEOUT);
-    }
-  }
+  return isMinimized;
+};
 
-  pauseVideo() {
-    if (
-      this.playerReady &&
-      this.player.getPlayerState() === YT.PlayerState.PLAYING
-    ) {
-      this.player.pauseVideo();
-      this.showBuffering();
-    }
-  }
-
-  updateIcon(iconId, iconSrc, isActive) {
-    const iconElement = document.querySelector(`#${iconId} .control-icon`);
-    if (iconElement) {
-      iconElement.src = iconSrc;
-      iconElement.classList.toggle('red', isActive);
-    }
-  }
-
-  toggleMute() {
-    if (this.playerReady) {
-      this.isMuted = !this.isMuted;
-      this.player[this.isMuted ? 'mute' : 'unMute']();
-      this.updateIcon(
-        'control-mute',
-        this.isMuted ? ICONS.volume_muted : ICONS.volume_high,
-        this.isMuted
-      );
-    }
-  }
-
-  async loadChannelVideo(channel, currentVideo = null) {
-    if (!channel) {
-      console.error('No channel found');
-      return;
-    }
-
-    this.updateChannelName(channel);
-
-    const videoToBePlayed = await this.getCurrentVideo(
-      channel.id,
-      currentVideo?.id
-    );
-
-    if (!videoToBePlayed) {
-      console.error('No video found for channel:', channel);
-      return;
-    }
-
-    this.currentVideo = videoToBePlayed;
-    const videoUrl = videoToBePlayed.url;
-    const videoId = this.extractVideoId(videoUrl);
-
-    if (videoId && this.playerReady) {
-      this.pauseVideo();
-      this.player.cueVideoById({
-        videoId,
-        startSeconds: videoToBePlayed.segmentStart
-      });
-
-      this.playVideo();
-      this.currentChannel = channel;
-    } else {
-      console.error('Player not ready or invalid video ID:', videoId);
-    }
-  }
-
-  extractVideoId(url) {
-    const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-    return match ? match[1] : null;
-  }
-
-  changeChannelByOffset(offset) {
-    const currentIndex = this.channels.findIndex(
-      (channel) => channel.id === this.currentChannel.id
-    );
-    const newIndex =
-      (currentIndex + offset + this.channels.length) % this.channels.length;
-    const newChannel = this.channels[newIndex];
-    this.loadChannelVideo(newChannel);
-
-    this.toggleChannelNameVisibility();
-  }
-
-  nextChannel() {
-    this.changeChannelByOffset(1);
-  }
-
-  previousChannel() {
-    this.changeChannelByOffset(-1);
-  }
-
-  showBuffering() {
-    document.querySelector('#buffer-gif')?.classList.add('active');
-  }
-
-  hideBuffering() {
-    document.querySelector('#buffer-gif')?.classList.remove('active');
-  }
-
-  updateChannelName(channel) {
-    const channelId = channel.id.toString().padStart(2, '0');
-    const channelName = `${channel.name} - ${channelId}`;
-    const channelNameElement = document.querySelector('#channel-name');
+const updateChannelName = (channel) => {
+  const channelId = channel.id.toString().padStart(2, '0');
+  const channelName = `${channel.name} - ${channelId}`;
+  const channelNameElement = document.querySelector('#channel-name');
+  if (channelNameElement) {
     channelNameElement.innerHTML = channelName;
-  }
-
-  toggleChannelNameVisibility() {
-    const channelNameElement = document.querySelector('#channel-name');
     channelNameElement.classList.add('active');
 
-    clearTimeout(this.channelNameTimeoutId);
-    this.channelNameTimeoutId = setTimeout(
-      () => channelNameElement.classList.remove('active'),
-      CHANNEL_NAME_TIMEOUT
-    );
+    setTimeout(() => {
+      channelNameElement.classList.remove('active');
+    }, CHANNEL_NAME_TIMEOUT);
   }
+};
 
-  updateVolumeBar(currentVolume) {
-    const volumeBar = document.querySelector('#volume-bar');
-    const maxBars = 100 / VOLUME_STEPS;
-    const currentStep = Math.ceil(currentVolume / VOLUME_STEPS);
+const togglePlayPause = (player, isPlaying) => {
+  isPlaying ? player.pauseVideo() : player.playVideo();
+  setControlIcon('control-power', ICONS.power, !isPlaying);
+  return !isPlaying;
+};
 
-    volumeBar.classList.add('active');
-    volumeBar.innerHTML = Array.from(
-      { length: maxBars },
-      (_, index) =>
-        `<div class="volume-bar-step ${
-          index < currentStep ? 'active' : ''
-        }"></div>`
-    ).join('');
-
-    clearTimeout(this.volumeBarTimeoutId);
-    this.volumeBarTimeoutId = setTimeout(
-      () => volumeBar.classList.remove('active'),
-      VOLUME_BAR_TIMEOUT
-    );
-  }
-
-  adjustVolume(increase) {
-    if (this.playerReady && increase !== undefined) {
-      const currentVolume = this.player.getVolume();
-      const adjustment = increase ? VOLUME_STEPS : -VOLUME_STEPS;
-      const newVolume = Math.min(Math.max(currentVolume + adjustment, 0), 100); // cap between 0 and 100
-
-      this.player.setVolume(newVolume);
-      this.updateVolumeBar(newVolume);
-      this.player.unMute();
+// Switch to the next or previous channel
+const changeChannel = async (player, channels, currentChannel, offset) => {
+  const currentIndex = channels.findIndex(
+    (channel) => channel.id === currentChannel.id
+  );
+  const newIndex = (currentIndex + offset + channels.length) % channels.length;
+  const newChannel = channels[newIndex];
+  const newVideo = await fetchCurrentVideo(newChannel.id);
+  if (newVideo) {
+    const videoId = extractVideoId(newVideo.url);
+    if (videoId) {
+      player.cueVideoById({ videoId, startSeconds: newVideo.segmentStart });
+      player.mute();
+      player.playVideo();
     }
   }
+  return { newChannel, newVideo };
+};
 
-  volumeUp() {
-    this.adjustVolume(true);
-  }
+const initApp = async (playerElementId) => {
+  const channels = await fetchChannels();
+  const state = {
+    player: null,
+    isPlaying: false,
+    isMuted: true,
+    isControlGroupMinimized: false,
+    currentChannel: channels[0] || null,
+    currentVideo: null,
+    channels,
+    isInteracted: false
+  };
 
-  volumeDown() {
-    this.adjustVolume(false);
-  }
-
-  turnOff() {
-    this.pauseVideo();
-    this.updateIcon('control-power', ICONS.power, true);
-  }
-
-  turnOn() {
-    this.playVideo();
-    this.updateIcon('control-power', ICONS.power, false);
-  }
-
-  toggleFullscreen() {
-    const playerElement = document.querySelector('#player');
-
-    console.log(playerElement);
-
-    const requestFullScreen =
-      playerElement.requestFullscreen ||
-      playerElement.mozRequestFullScreen ||
-      playerElement.webkitRequestFullScreen ||
-      playerElement.msRequestFullscreen;
-
-    if (requestFullScreen) {
-      requestFullScreen.call(playerElement);
-    }
-  }
-
-  toggleControlGroup() {
-    const controlGroup = document.querySelector('#controls');
-    const minimizeIcon = document.querySelector(
-      '#control-minimize .control-icon'
-    );
-
-    this.isControlGroupMinimized = !this.isControlGroupMinimized;
-    controlGroup.classList.toggle('minimized', this.isControlGroupMinimized);
-    minimizeIcon.src = this.isControlGroupMinimized
-      ? '/assets/icons/expand.svg'
-      : '/assets/icons/contract.svg';
-
-    // toggle control group class
-    controlGroup.classList.toggle('minimized', this.isControlGroupMinimized);
-  }
-
-  addControlListeners() {
-    const controls = {
-      power: () => {
-        if (this.player.getPlayerState() === YT.PlayerState.PLAYING) {
-          this.turnOff();
-        } else {
-          this.turnOn();
+  loadYouTubeAPI(() => {
+    state.player = initializePlayer(
+      playerElementId,
+      async () => {
+        const initialVideo = await fetchCurrentVideo(state.currentChannel.id);
+        if (initialVideo) {
+          const videoId = extractVideoId(initialVideo.url);
+          if (videoId) {
+            state.player.cueVideoById({
+              videoId,
+              startSeconds: initialVideo.segmentStart
+            });
+            state.player.playVideo();
+            state.currentVideo = initialVideo;
+          }
         }
       },
-      chup: () => this.nextChannel(),
-      chdown: () => this.previousChannel(),
-      mute: () => this.toggleMute(),
-      volup: () => this.volumeUp(),
-      voldown: () => this.volumeDown()
+      ({ target, data }) => {
+        state.isPlaying = data === YT.PlayerState.PLAYING;
+        state.isMuted = target.isMuted();
+
+        if (state.isMuted) {
+          setControlIcon('control-mute', ICONS.volume_muted, true);
+        }
+
+        if (data === YT.PlayerState.PLAYING && state.currentVideo) {
+          deactiveBuffering(state);
+
+          const intervalId = setInterval(async () => {
+            const currentTime = state.player.getCurrentTime();
+            if (currentTime >= state.currentVideo.segmentEnd) {
+              clearInterval(intervalId);
+              const { newChannel, newVideo } = await changeChannel(
+                state.player,
+                state.channels,
+                state.currentChannel,
+                1
+              );
+              state.currentChannel = newChannel;
+              state.currentVideo = newVideo;
+            }
+          }, INTERVAL_CHECK_MS);
+        } else if (
+          data === YT.PlayerState.CUED ||
+          data === YT.PlayerState.UNSTARTED
+        ) {
+          state.player.playVideo();
+        } else {
+          showBuffering();
+
+          setControlIcon('control-power', ICONS.power, true);
+        }
+      }
+    );
+
+    // Add Event Listeners for all buttons
+    const controls = {
+      power: () => {
+        state.isPlaying = togglePlayPause(state.player, state.isPlaying);
+      },
+      mute: () => {
+        state.isMuted = toggleMute(state.player, state.isMuted);
+      },
+      chup: async () => {
+        const { newChannel, newVideo } = await changeChannel(
+          state.player,
+          state.channels,
+          state.currentChannel,
+          1
+        );
+        state.currentChannel = newChannel;
+        state.currentVideo = newVideo;
+        updateChannelName(newChannel);
+      },
+      chdown: async () => {
+        const { newChannel, newVideo } = await changeChannel(
+          state.player,
+          state.channels,
+          state.currentChannel,
+          -1
+        );
+        state.currentChannel = newChannel;
+        state.currentVideo = newVideo;
+        updateChannelName(newChannel);
+      },
+      volup: () => {
+        const currentVolume = state.player.getVolume();
+        const newVolume = Math.min(currentVolume + VOLUME_STEPS, 100);
+        state.player.setVolume(newVolume);
+        updateVolumeBar(newVolume);
+        state.player.unMute();
+        state.isMuted = false;
+      },
+      voldown: () => {
+        const currentVolume = state.player.getVolume();
+        const newVolume = Math.max(currentVolume - VOLUME_STEPS, 0);
+        state.player.setVolume(newVolume);
+        updateVolumeBar(newVolume);
+        state.player.unMute();
+        state.isMuted = false;
+      },
+      fullscreen: () => {
+        toggleFullscreen(playerElementId);
+      },
+      minimize: () => {
+        state.isControlGroupMinimized = toggleControlGroup(
+          state.isControlGroupMinimized
+        );
+      }
     };
 
     for (const [control, handler] of Object.entries(controls)) {
       document
         .querySelector(`#control-${control}`)
-        ?.addEventListener('click', handler);
+        ?.addEventListener('click', () => {
+          handler();
+          state.isInteracted = true;
+        });
     }
+  });
+};
 
-    document.querySelector('#controls')?.addEventListener('click', () => {
-      this.hasInteracted = true;
-    });
-
-    document
-      .querySelector('#control-fullscreen')
-      ?.addEventListener('click', () => {
-        this.toggleFullscreen();
-      });
-
-    document
-      .querySelector('#control-minimize')
-      ?.addEventListener('click', (event) => {
-        this.toggleControlGroup();
-      });
-  }
-}
-
-const youtubePlayer = new YouTubePlayer('player');
+initApp('player');
