@@ -186,11 +186,10 @@ body {
 
 .volume-bar-step {
   width: 20px;
-  height: 100%;
   background-color: var(--tertiary-color);
-  visibility: hidden;
+  height: 5px;
 }
 
 .volume-bar-step.active {
-  visibility: visible;
+  height: 100%;
 }
