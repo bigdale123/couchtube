@@ -49,6 +49,7 @@ body {
   font-family: 'VT323', monospace;
   font-weight: 400;
   font-style: normal;
+  position: relative;
 }
 
 .player-wrapper {
@@ -206,4 +207,94 @@ body {
 
 .volume-bar-step.active {
   height: 100%;
+}
+
+#info-modal-container {
+  position: absolute;
+  z-index: 3;
+  display: none;
+  background-color: rgba(0, 0, 0, 0.5);
+  width: 100vw;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  top: 0;
+  left: 0;
+}
+
+#info-modal-container.active {
+  display: flex;
+}
+
+#info-modal {
+  background-color: var(--primary-color);
+  padding: 15px;
+  border-radius: 5px;
+  gap: 10px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  width: 500px;
+}
+
+#info-modal-title {
+  font-size: 2rem;
+  color: var(--secondary-color);
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+#info-modal-close-button {
+  align-items: flex-end;
+}
+
+#info-modal-close-button > img {
+  width: 25px;
+  height: 25px;
+}
+
+#video-link {
+  display: flex;
+  color: var(--secondary-color);
+  font-size: 1.4em;
+  gap: 3px;
+  cursor: pointer;
+  align-items: center;
+  margin-bottom: 20px;
+  display: none;
+  text-decoration: underline;
+}
+
+#video-link.active {
+  display: flex;
+}
+
+#video-link-title {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 400px;
+}
+
+#video-link > img {
+  width: 20px;
+  height: 20px;
+}
+
+#channel-list {
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.channel-list-item {
+  color: var(--secondary-color);
+  font-size: 1.4em;
+  list-style: none;
+  padding: 0;
+  cursor: pointer;
 }

@@ -107,6 +107,18 @@ const toggleMute = (player, isMuted) => {
   return !isMuted;
 };
 
+const updatevideoLink = (state) => {
+  const videoLinkContainer = document.querySelector('#video-link');
+  const videoLinkTitle = document.querySelector('#video-link-title');
+
+  if (state.currentVideoName) {
+    videoLinkTitle.innerHTML = state.currentVideoName;
+    videoLinkContainer.classList.add('active');
+  } else {
+    videoLinkContainer.classList.remove('active');
+  }
+};
+
 const updateVolumeBar = (currentVolume) => {
   const volumeBar = document.querySelector('#volume-bar');
   if (!volumeBar) return;
@@ -124,6 +136,34 @@ const updateVolumeBar = (currentVolume) => {
   ).join('');
 
   setTimeout(() => volumeBar.classList.remove('active'), VOLUME_BAR_TIMEOUT);
+};
+
+const updateChannelList = (state, channels) => {
+  const channelList = document.querySelector('#channel-list');
+  if (!channelList) return;
+
+  const channelListItems = channels.map((channel) => {
+    const channelListItem = document.createElement('div');
+    channelListItem.classList.add('channel-list-item');
+    channelListItem.innerHTML = `${channel.id.toString().padStart(2, '0')} - ${
+      channel.name
+    }`;
+    channelListItem.addEventListener('click', async () => {
+      const { newChannel, newVideo } = await jumpToChannel(
+        state.player,
+        state.channels,
+        channel.id
+      );
+
+      state.currentChannel = newChannel;
+      state.currentVideo = newVideo;
+      updateChannelName(newChannel);
+    });
+    return channelListItem;
+  });
+
+  channelList.innerHTML = '';
+  channelList.append(...channelListItems);
 };
 
 const toggleFullscreen = (playerElementId) => {
@@ -190,6 +230,117 @@ const changeChannel = async (player, channels, currentChannel, offset) => {
   return { newChannel, newVideo };
 };
 
+const jumpToChannel = async (player, channels, channelId) => {
+  const newChannel = channels.find((channel) => channel.id === channelId);
+  const newVideo = await fetchCurrentVideo(newChannel.id);
+  if (newVideo) {
+    const videoId = extractVideoId(newVideo.url);
+    if (videoId) {
+      player.cueVideoById({ videoId, startSeconds: newVideo.segmentStart });
+      player.mute();
+      player.playVideo();
+    }
+  }
+  return { newChannel, newVideo };
+};
+
+const closeInfoModal = () => {
+  const infoPopup = document.querySelector('#info-modal-container');
+  infoPopup.classList.remove('active');
+};
+
+const toggleInfoModal = () => {
+  const infoPopup = document.querySelector('#info-modal-container');
+  infoPopup.classList.toggle('active');
+
+  infoPopup.addEventListener('click', (event) => {
+    if (event.target === infoPopup) {
+      closeInfoModal();
+    }
+  });
+};
+
+const addEventListeners = (state) => {
+  // Add Event Listeners for all buttons
+  const controls = {
+    power: () => {
+      state.isPlaying = togglePlayPause(state.player, state.isPlaying);
+    },
+    mute: () => {
+      state.isMuted = toggleMute(state.player, state.isMuted);
+    },
+    chup: async () => {
+      const { newChannel, newVideo } = await changeChannel(
+        state.player,
+        state.channels,
+        state.currentChannel,
+        1
+      );
+      state.currentChannel = newChannel;
+      state.currentVideo = newVideo;
+      updateChannelName(newChannel);
+    },
+    chdown: async () => {
+      const { newChannel, newVideo } = await changeChannel(
+        state.player,
+        state.channels,
+        state.currentChannel,
+        -1
+      );
+      state.currentChannel = newChannel;
+      state.currentVideo = newVideo;
+      updateChannelName(newChannel);
+    },
+    volup: () => {
+      const currentVolume = state.player.getVolume();
+      const newVolume = Math.min(currentVolume + VOLUME_STEPS, 100);
+      state.player.setVolume(newVolume);
+      updateVolumeBar(newVolume);
+      state.player.unMute();
+      state.isMuted = false;
+    },
+    voldown: () => {
+      const currentVolume = state.player.getVolume();
+      const newVolume = Math.max(currentVolume - VOLUME_STEPS, 0);
+      state.player.setVolume(newVolume);
+      updateVolumeBar(newVolume);
+      state.player.unMute();
+      state.isMuted = false;
+    },
+    fullscreen: () => {
+      toggleFullscreen(playerElementId);
+    },
+    minimize: () => {
+      state.isControlGroupMinimized = toggleControlGroup(
+        state.isControlGroupMinimized
+      );
+    },
+    info: () => {
+      toggleInfoModal();
+    }
+  };
+
+  for (const [control, handler] of Object.entries(controls)) {
+    document
+      .querySelector(`#control-${control}`)
+      ?.addEventListener('click', () => {
+        handler();
+        state.isInteracted = true;
+      });
+  }
+
+  // other events
+  document
+    .querySelector('#info-modal-close-button')
+    .addEventListener('click', () => {
+      closeInfoModal();
+    });
+
+  document.querySelector('#video-link').addEventListener('click', () => {
+    window.open(state.currentVideo.url, '_blank');
+  });
+};
+
 const initApp = async (playerElementId) => {
   const channels = await fetchChannels();
   const state = {
@@ -200,8 +351,12 @@ const initApp = async (playerElementId) => {
     currentChannel: channels[0] || null,
     currentVideo: null,
     channels,
-    isInteracted: false
+    isInteracted: false,
+    currentVideoName: ''
   };
+
+  addEventListeners(state);
+  updateChannelList(state, channels);
 
   loadYouTubeAPI(() => {
     state.player = initializePlayer(
@@ -223,6 +378,9 @@ const initApp = async (playerElementId) => {
       ({ target, data }) => {
         state.isPlaying = data === YT.PlayerState.PLAYING;
         state.isMuted = target.isMuted();
+        state.currentVideoName = target.getVideoData().title;
+
+        updatevideoLink(state);
 
         if (state.isMuted) {
           setControlIcon('control-mute', ICONS.volume_muted, true);
@@ -257,71 +415,6 @@ const initApp = async (playerElementId) => {
         }
       }
     );
-
-    // Add Event Listeners for all buttons
-    const controls = {
-      power: () => {
-        state.isPlaying = togglePlayPause(state.player, state.isPlaying);
-      },
-      mute: () => {
-        state.isMuted = toggleMute(state.player, state.isMuted);
-      },
-      chup: async () => {
-        const { newChannel, newVideo } = await changeChannel(
-          state.player,
-          state.channels,
-          state.currentChannel,
-          1
-        );
-        state.currentChannel = newChannel;
-        state.currentVideo = newVideo;
-        updateChannelName(newChannel);
-      },
-      chdown: async () => {
-        const { newChannel, newVideo } = await changeChannel(
-          state.player,
-          state.channels,
-          state.currentChannel,
-          -1
-        );
-        state.currentChannel = newChannel;
-        state.currentVideo = newVideo;
-        updateChannelName(newChannel);
-      },
-      volup: () => {
-        const currentVolume = state.player.getVolume();
-        const newVolume = Math.min(currentVolume + VOLUME_STEPS, 100);
-        state.player.setVolume(newVolume);
-        updateVolumeBar(newVolume);
-        state.player.unMute();
-        state.isMuted = false;
-      },
-      voldown: () => {
-        const currentVolume = state.player.getVolume();
-        const newVolume = Math.max(currentVolume - VOLUME_STEPS, 0);
-        state.player.setVolume(newVolume);
-        updateVolumeBar(newVolume);
-        state.player.unMute();
-        state.isMuted = false;
-      },
-      fullscreen: () => {
-        toggleFullscreen(playerElementId);
-      },
-      minimize: () => {
-        state.isControlGroupMinimized = toggleControlGroup(
-          state.isControlGroupMinimized
-        );
-      }
-    };
-
-    for (const [control, handler] of Object.entries(controls)) {
-      document
-        .querySelector(`#control-${control}`)
-        ?.addEventListener('click', () => {
-          handler();
-          state.isInteracted = true;
-        });
-    }
   });
 };
 
