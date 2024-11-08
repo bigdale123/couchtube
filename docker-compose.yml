@@ -6,6 +6,4 @@ services:
     container_name: couchtube_app
     ports:
       - "8081:8081"
-    environment:
-      - PORT=8081                       # Example environment variable for custom configuration
     restart: unless-stopped
