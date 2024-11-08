@@ -41,7 +41,7 @@ func populateDatabase(db *sql.DB) error {
 	// parse the json file and insert the data into the database
 	// ignore if there are channels already defined
 
-	channels, err := helpers.LoadJSONFromFile[jsonmodels.ChannelsJson]("/channels.json")
+	channels, err := helpers.LoadJSONFromFile[jsonmodels.ChannelsJson]("/default-channels.json")
 	if err != nil {
 		log.Fatal(err)
 		return err
