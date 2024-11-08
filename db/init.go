@@ -73,12 +73,13 @@ func PopulateDatabase() {
 
 	tx, err := db.Begin()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to start database transaction:", err)
 	}
 
 	defer func() {
 		if err != nil {
 			tx.Rollback()
+			log.Println("Database transaction rolled back due to error:", err)
 		}
 	}()
 
@@ -96,8 +97,8 @@ func PopulateDatabase() {
 		}
 	}
 
-	if err = tx.Commit(); err != nil {
-		log.Fatal(err)
+	if err := tx.Commit(); err != nil {
+		log.Fatal("Failed to commit database transaction:", err)
 	}
 
 	log.Println("Data inserted successfully.")
