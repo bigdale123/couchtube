@@ -108,7 +108,7 @@ const toggleMute = (player, isMuted) => {
   return !isMuted;
 };
 
-const updatevideoLink = (state) => {
+const updateVideoLink = (state) => {
   const videoLinkContainer = document.querySelector('#video-link');
   const videoLinkTitle = document.querySelector('#video-link-title');
 
@@ -430,7 +430,7 @@ const initApp = async (playerElementId) => {
         state.isMuted = target.isMuted();
         state.currentVideoName = target.getVideoData().title;
 
-        updatevideoLink(state);
+        updateVideoLink(state);
 
         if (state.isMuted) {
           setControlIcon('control-mute', ICONS.volume_muted, true);
