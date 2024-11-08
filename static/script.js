@@ -3,6 +3,7 @@ const BUFFERING_TIMEOUT = 3500;
 const CHANNELS_ENDPOINT = '/channels';
 const CURRENT_VIDEO_ENDPOINT = '/current-video';
 const SUBMIT_VIDEO_ENDPOINT = '/submit-list';
+const INVALIDATE_VIDEO_ENDPOINT = '/invalidate-video';
 const VOLUME_STEPS = 5;
 const VOLUME_BAR_TIMEOUT = 2000;
 const CHANNEL_NAME_TIMEOUT = 3000;
@@ -23,12 +24,12 @@ const loadYouTubeAPI = (onReady) => {
   window.onYouTubeIframeAPIReady = onReady;
 };
 
-const initializePlayer = (playerElementId, onReady, onStateChange) => {
+const initializePlayer = (playerElementId, onReady, onStateChange, onError) => {
   return new YT.Player(playerElementId, {
     width: '100%',
     height: '100%',
     autoplay: 1,
-    events: { onReady, onStateChange },
+    events: { onReady, onStateChange, onError },
     playerVars: {
       mute: 1,
       controls: 0,
@@ -56,6 +57,25 @@ const fetchCurrentVideo = async (channelId, videoId) => {
   const res = await fetch(url);
   const data = await res.json();
   return data.video || null;
+};
+
+const handleUnavailableVideo = async (state) => {
+  const url = `${INVALIDATE_VIDEO_ENDPOINT}?video-id=${state.currentVideo.id}`;
+  const res = await fetch(url, {
+    method: 'DELETE'
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    const { newChannel, newVideo } = await changeChannel(
+      state.player,
+      state.channels,
+      state.currentChannel,
+      1
+    );
+    state.currentChannel = newChannel;
+    state.currentVideo = newVideo;
+  }
 };
 
 const extractVideoId = (url) => {
@@ -408,62 +428,85 @@ const initApp = async (playerElementId) => {
   addEventListeners(state);
   updateChannelList(state, channels);
 
+  const onReady = async () => {
+    const initialVideo = await fetchCurrentVideo(state.currentChannel.id);
+    if (initialVideo) {
+      const videoId = extractVideoId(initialVideo.url);
+      if (videoId) {
+        state.player.cueVideoById({
+          videoId,
+          startSeconds: initialVideo.segmentStart
+        });
+        state.player.playVideo();
+        state.currentVideo = initialVideo;
+      }
+    }
+  };
+
+  const onStateChange = ({ target, data }) => {
+    state.isPlaying = data === YT.PlayerState.PLAYING;
+    state.isMuted = target.isMuted();
+    state.currentVideoName = target.getVideoData().title;
+
+    updateVideoLink(state);
+
+    if (state.isMuted) {
+      setControlIcon('control-mute', ICONS.volume_muted, true);
+    }
+
+    if (data === YT.PlayerState.PLAYING && state.currentVideo) {
+      deactiveBuffering(state);
+
+      const intervalId = setInterval(async () => {
+        const currentTime = state.player.getCurrentTime();
+        if (currentTime >= state.currentVideo.segmentEnd) {
+          clearInterval(intervalId);
+          const { newChannel, newVideo } = await changeChannel(
+            state.player,
+            state.channels,
+            state.currentChannel,
+            1
+          );
+          state.currentChannel = newChannel;
+          state.currentVideo = newVideo;
+        }
+      }, INTERVAL_CHECK_MS);
+    } else if (
+      data === YT.PlayerState.CUED ||
+      data === YT.PlayerState.UNSTARTED
+    ) {
+      state.player.playVideo();
+    } else {
+      showBuffering();
+
+      setControlIcon('control-power', ICONS.power, true);
+    }
+  };
+
+  const onError = ({ data }) => {
+    const errorCode = data;
+    switch (errorCode) {
+      case 100:
+        console.error('Video is unavailable: removed or marked as private.');
+        handleUnavailableVideo(state);
+        break;
+      case 101:
+      case 150:
+        console.error('Video cannot be embedded.');
+        handleUnavailableVideo(state);
+        break;
+      default:
+        console.error('An unknown error occurred with the video.');
+        handleUnavailableVideo(state);
+    }
+  };
+
   loadYouTubeAPI(() => {
     state.player = initializePlayer(
       playerElementId,
-      async () => {
-        const initialVideo = await fetchCurrentVideo(state.currentChannel.id);
-        if (initialVideo) {
-          const videoId = extractVideoId(initialVideo.url);
-          if (videoId) {
-            state.player.cueVideoById({
-              videoId,
-              startSeconds: initialVideo.segmentStart
-            });
-            state.player.playVideo();
-            state.currentVideo = initialVideo;
-          }
-        }
-      },
-      ({ target, data }) => {
-        state.isPlaying = data === YT.PlayerState.PLAYING;
-        state.isMuted = target.isMuted();
-        state.currentVideoName = target.getVideoData().title;
-
-        updateVideoLink(state);
-
-        if (state.isMuted) {
-          setControlIcon('control-mute', ICONS.volume_muted, true);
-        }
-
-        if (data === YT.PlayerState.PLAYING && state.currentVideo) {
-          deactiveBuffering(state);
-
-          const intervalId = setInterval(async () => {
-            const currentTime = state.player.getCurrentTime();
-            if (currentTime >= state.currentVideo.segmentEnd) {
-              clearInterval(intervalId);
-              const { newChannel, newVideo } = await changeChannel(
-                state.player,
-                state.channels,
-                state.currentChannel,
-                1
-              );
-              state.currentChannel = newChannel;
-              state.currentVideo = newVideo;
-            }
-          }, INTERVAL_CHECK_MS);
-        } else if (
-          data === YT.PlayerState.CUED ||
-          data === YT.PlayerState.UNSTARTED
-        ) {
-          state.player.playVideo();
-        } else {
-          showBuffering();
-
-          setControlIcon('control-power', ICONS.power, true);
-        }
-      }
+      onReady,
+      onStateChange,
+      onError
     );
   });
 };

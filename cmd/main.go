@@ -54,6 +54,7 @@ func main() {
 		{Path: "/channels", Method: "GET", Handler: mediaHandler.FetchAllChannels, Cors: true},
 		{Path: "/current-video", Method: "GET", Handler: mediaHandler.GetCurrentVideo, Cors: true},
 		{Path: "/submit-list", Method: "POST", Handler: mediaHandler.SubmitList, Cors: true},
+		{Path: "/invalidate-video", Method: "DELETE", Handler: mediaHandler.InvalidateVideo, Cors: true},
 	}
 	registerRoutes(http.DefaultServeMux, routes)
 

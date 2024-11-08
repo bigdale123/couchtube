@@ -78,6 +78,27 @@ func (s *MediaService) FetchNextVideo(channelId int, videoId int) *dbmodels.Vide
 	return video
 }
 
+func (s *MediaService) InvalidateVideo(videoId int) error {
+	tx, err := s.VideoRepo.BeginTx()
+
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	if err = s.VideoRepo.DeleteVideo(tx, videoId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *MediaService) SubmitList(list jsonmodels.SubmitListRequestJson) (bool, error) {
 	videoListUrl := list.VideoListUrl
 

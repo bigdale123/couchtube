@@ -81,6 +81,36 @@ func (h *Media) GetCurrentVideo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"video": video})
 }
 
+func (h *Media) InvalidateVideo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	videoID := r.URL.Query().Get("video-id")
+	if videoID == "" {
+		http.Error(w, "video-id is required", http.StatusBadRequest)
+		return
+	}
+
+	videoIDInt, err := strconv.Atoi(videoID)
+	if err != nil {
+		http.Error(w, "Invalid video-id", http.StatusBadRequest)
+		return
+	}
+
+	err = h.Service.InvalidateVideo(videoIDInt)
+	if err != nil {
+		http.Error(w, "Failed to invalidate video", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+
+}
+
 func (h *Media) SubmitList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
