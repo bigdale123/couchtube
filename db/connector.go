@@ -21,8 +21,9 @@ func GetConnector() (*sql.DB, error) {
 		dbFilePath := "couchtube.db"
 
 		// Create the database file if it doesn't exist
-		if _, err := os.Stat(dbFilePath); os.IsNotExist(err) {
-			file, err := os.Create(dbFilePath)
+		if _, err = os.Stat(dbFilePath); os.IsNotExist(err) {
+			var file *os.File
+			file, err = os.Create(dbFilePath)
 			if err != nil {
 				log.Fatalf("Failed to create database file: %v", err)
 			}
@@ -49,5 +50,10 @@ func GetConnector() (*sql.DB, error) {
 		}
 	})
 
-	return dbInstance, err
+	if err != nil {
+		log.Printf("Failed to get database connector: %v", err)
+		return nil, err
+	}
+
+	return dbInstance, nil
 }

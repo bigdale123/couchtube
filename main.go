@@ -20,6 +20,9 @@ func main() {
 	}
 	defer dbInstance.Close()
 
+	db.InitTables(dbInstance)
+	db.PopulateDatabase(dbInstance)
+
 	// Initialize Repositories
 	channelRepo := repo.NewChannelRepository(dbInstance)
 	videoRepo := repo.NewVideoRepository(dbInstance)
@@ -36,9 +39,6 @@ func main() {
 	http.Handle("/channels", middleware.CORSMiddleware(http.HandlerFunc(channelHandler.GetChannels)))
 	http.Handle("/current-video", middleware.CORSMiddleware(http.HandlerFunc(channelHandler.GetCurrentVideo)))
 	http.Handle("/submit-list", middleware.CORSMiddleware(http.HandlerFunc(submitListHandler.SubmitList)))
-
-	db.InitTables()
-	db.PopulateDatabase()
 
 	log.Println("Server starting on port 8081...")
 	log.Fatal(http.ListenAndServe(":8081", nil))

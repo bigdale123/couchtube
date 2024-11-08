@@ -9,12 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func InitTables() {
-	db, err := GetConnector()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+func InitTables(db *sql.DB) {
 
 	createVideosTableQuery := `CREATE TABLE IF NOT EXISTS videos (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
@@ -33,7 +28,7 @@ func InitTables() {
 	);`
 	createIndexesQuery := `CREATE INDEX IF NOT EXISTS idx_videos_channel_id ON videos(channel_id);`
 
-	_, err = db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery)
+	_, err := db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,7 +36,7 @@ func InitTables() {
 	log.Println("Database initialized and tables created successfully.")
 }
 
-func PopulateDatabase() {
+func PopulateDatabase(db *sql.DB) {
 	// parse the json file and insert the data into the database
 	// ignore if there are channels already defined
 
@@ -49,12 +44,6 @@ func PopulateDatabase() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	db, err := sql.Open("sqlite", "file:couchtube.db?cache=shared&mode=rwc")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
 
 	// check if anything already exists in channels
 	var exists int
