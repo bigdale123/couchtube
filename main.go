@@ -20,8 +20,7 @@ func main() {
 	}
 	defer dbInstance.Close()
 
-	db.InitTables(dbInstance)
-	db.PopulateDatabase(dbInstance)
+	db.InitDatabase(dbInstance)
 
 	// Initialize Repositories
 	channelRepo := repo.NewChannelRepository(dbInstance)

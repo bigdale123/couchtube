@@ -9,8 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func InitTables(db *sql.DB) {
-
+func createTables(db *sql.DB) error {
 	createVideosTableQuery := `CREATE TABLE IF NOT EXISTS videos (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
 		"channel_id" INTEGER NOT NULL,
@@ -31,18 +30,21 @@ func InitTables(db *sql.DB) {
 	_, err := db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery)
 	if err != nil {
 		log.Fatal(err)
+		return err
 	}
 
 	log.Println("Database initialized and tables created successfully.")
+	return nil
 }
 
-func PopulateDatabase(db *sql.DB) {
+func populateDatabase(db *sql.DB) error {
 	// parse the json file and insert the data into the database
 	// ignore if there are channels already defined
 
 	channels, err := helpers.LoadJSONFromFile[jsonmodels.ChannelsJson]("/channels.json")
 	if err != nil {
 		log.Fatal(err)
+		return err
 	}
 
 	// check if anything already exists in channels
@@ -50,11 +52,12 @@ func PopulateDatabase(db *sql.DB) {
 	err = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM channels LIMIT 1);`).Scan(&exists)
 	if err != nil {
 		log.Fatal(err)
+		return err
 	}
 
 	if exists == 1 {
 		log.Println("Data already exists in the database. Skipping db population")
-		return
+		return nil
 	}
 
 	insertChannelQuery := `INSERT OR IGNORE INTO channels (name) VALUES (?)`
@@ -63,6 +66,7 @@ func PopulateDatabase(db *sql.DB) {
 	tx, err := db.Begin()
 	if err != nil {
 		log.Fatal("Failed to start database transaction:", err)
+		return err
 	}
 
 	defer func() {
@@ -76,21 +80,25 @@ func PopulateDatabase(db *sql.DB) {
 		channelID, err := insertOrGetChannelID(tx, channel.Name, insertChannelQuery)
 		if err != nil {
 			log.Fatal(err)
+			return err
 		}
 
 		for _, video := range channel.Videos {
 			_, err = tx.Exec(insertVideoQuery, channelID, video.Url, video.SegmentStart, video.SegmentEnd)
 			if err != nil {
 				log.Fatal(err)
+				return err
 			}
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		log.Fatal("Failed to commit database transaction:", err)
+		return err
 	}
 
 	log.Println("Data inserted successfully.")
+	return nil
 }
 
 func insertOrGetChannelID(tx *sql.Tx, name, query string) (int64, error) {
@@ -116,4 +124,13 @@ func insertOrGetChannelID(tx *sql.Tx, name, query string) (int64, error) {
 	}
 
 	return existingID, nil
+}
+
+func InitDatabase(db *sql.DB) {
+	if err := createTables(db); err != nil {
+		log.Fatal("Failed to create tables:", err)
+	}
+	if err := populateDatabase(db); err != nil {
+		log.Println("Database already populated or error occurred:", err)
+	}
 }
