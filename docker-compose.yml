@@ -6,9 +6,6 @@ services:
     container_name: couchtube_app
     ports:
       - "8081:8081"
-    volumes:
-      - ./data:/app/data                # Persistent volume for SQLite database
-      - ./static:/app/static            # Mount static files for front-end assets
     environment:
       - PORT=8081                       # Example environment variable for custom configuration
     restart: unless-stopped
