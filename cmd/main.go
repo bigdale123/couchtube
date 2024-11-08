@@ -44,18 +44,16 @@ func main() {
 	videoRepo := repo.NewVideoRepository(dbInstance)
 
 	// Initialize Services
-	channelService := services.NewChannelService(channelRepo, videoRepo)
-	submitListService := services.NewSubmitListService(channelRepo, videoRepo)
+	mediaService := services.NewMediaService(channelRepo, videoRepo)
 
 	// Initialize Handlers with services
-	channelHandler := handlers.NewChannelHandler(channelService)
-	submitListHandler := handlers.NewSubmitListHandler((submitListService))
+	mediaHandler := handlers.NewMediaHandler(mediaService)
 
 	routes := []Route{
 		{Path: "/", Method: "GET", Handler: http.FileServer(http.Dir("./static")).ServeHTTP, Cors: true},
-		{Path: "/channels", Method: "GET", Handler: channelHandler.GetChannels, Cors: true},
-		{Path: "/current-video", Method: "GET", Handler: channelHandler.GetCurrentVideo, Cors: true},
-		{Path: "/submit-list", Method: "POST", Handler: submitListHandler.SubmitList, Cors: true},
+		{Path: "/channels", Method: "GET", Handler: mediaHandler.FetchAllChannels, Cors: true},
+		{Path: "/current-video", Method: "GET", Handler: mediaHandler.GetCurrentVideo, Cors: true},
+		{Path: "/submit-list", Method: "POST", Handler: mediaHandler.SubmitList, Cors: true},
 	}
 	registerRoutes(http.DefaultServeMux, routes)
 

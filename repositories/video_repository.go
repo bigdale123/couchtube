@@ -8,9 +8,9 @@ import (
 
 type VideoRepository interface {
 	GetVideosByChannelID(channelID int) ([]dbmodels.Video, error)
-	GetNextVideo(videoID int, channelID int) (*dbmodels.Video, error)
+	FetchNextVideo(videoID int, channelID int) (*dbmodels.Video, error)
 	SaveVideo(tx *sql.Tx, channelID int, videoUrl string, segmentStart int, segmentEnd int) error
-	PurgeVideos(tx *sql.Tx) error
+	DeleteAllVideos(tx *sql.Tx) error
 	BeginTx() (*sql.Tx, error)
 }
 
@@ -53,7 +53,7 @@ func (r *videoRepository) GetVideosByChannelID(channelID int) ([]dbmodels.Video,
 	return videos, nil
 }
 
-func (r *videoRepository) GetNextVideo(videoID int, channelID int) (*dbmodels.Video, error) {
+func (r *videoRepository) FetchNextVideo(videoID int, channelID int) (*dbmodels.Video, error) {
 	row := r.db.QueryRow(`
 		SELECT id, channel_id, url, segment_start, segment_end
 		FROM videos
@@ -99,7 +99,7 @@ func (r *videoRepository) SaveVideo(tx *sql.Tx, channelID int, videoUrl string, 
 	return err
 }
 
-func (r *videoRepository) PurgeVideos(tx *sql.Tx) error {
+func (r *videoRepository) DeleteAllVideos(tx *sql.Tx) error {
 	exec := r.db.Exec
 	if tx != nil {
 		exec = tx.Exec

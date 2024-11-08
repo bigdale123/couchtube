@@ -14,3 +14,7 @@ type ChannelJson struct {
 type ChannelsJson struct {
 	Channels []ChannelJson `json:"channels"`
 }
+
+type SubmitListRequestJson struct {
+	VideoListUrl string `json:"videoListUrl"`
+}

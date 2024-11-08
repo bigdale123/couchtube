@@ -6,24 +6,25 @@ import (
 	"strconv"
 
 	dbmodels "github.com/ozencb/couchtube/models/db"
+	jsonmodels "github.com/ozencb/couchtube/models/json"
 	"github.com/ozencb/couchtube/services"
 )
 
-type ChannelHandler struct {
-	Service *services.ChannelService
+type Media struct {
+	Service *services.MediaService
 }
 
-func NewChannelHandler(service *services.ChannelService) *ChannelHandler {
-	return &ChannelHandler{Service: service}
+func NewMediaHandler(service *services.MediaService) *Media {
+	return &Media{Service: service}
 }
 
-func (h *ChannelHandler) GetChannels(w http.ResponseWriter, r *http.Request) {
+func (h *Media) FetchAllChannels(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	channels, err := h.Service.GetChannels()
+	channels, err := h.Service.FetchAllChannels()
 	if err != nil {
 		http.Error(w, "Failed to load channels", http.StatusInternalServerError)
 		return
@@ -34,7 +35,7 @@ func (h *ChannelHandler) GetChannels(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"channels": channels})
 }
 
-func (h *ChannelHandler) GetCurrentVideo(w http.ResponseWriter, r *http.Request) {
+func (h *Media) GetCurrentVideo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -54,14 +55,14 @@ func (h *ChannelHandler) GetCurrentVideo(w http.ResponseWriter, r *http.Request)
 	videoID := r.URL.Query().Get("video-id")
 
 	var video *dbmodels.Video
-	// if videoId is provided, call GetNextVideo
+	// if videoId is provided, call FetchNextVideo
 	if videoID != "" {
 		videoIDInt, err := strconv.Atoi(videoID)
 		if err != nil {
 			http.Error(w, "Invalid video-id", http.StatusBadRequest)
 			return
 		}
-		video = h.Service.GetNextVideo(channelIDInt, videoIDInt)
+		video = h.Service.FetchNextVideo(channelIDInt, videoIDInt)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"video": video})
@@ -78,4 +79,33 @@ func (h *ChannelHandler) GetCurrentVideo(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{"video": video})
+}
+
+func (h *Media) SubmitList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var list jsonmodels.SubmitListRequestJson
+	err := json.NewDecoder(r.Body).Decode(&list)
+	if err != nil {
+		http.Error(w, "Failed to parse list", http.StatusBadRequest)
+		return
+	}
+
+	if list.VideoListUrl == "" {
+		http.Error(w, "videoListUrl is required", http.StatusBadRequest)
+		return
+	}
+
+	success, err := h.Service.SubmitList(list)
+	if err != nil {
+		http.Error(w, "Failed to submit list", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": success})
 }

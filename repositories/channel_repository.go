@@ -7,9 +7,9 @@ import (
 )
 
 type ChannelRepository interface {
-	GetChannels() ([]dbmodels.Channel, error)
-	SaveChannel(tx *sql.Tx, channelName string) (int, error)
-	PurgeChannels(tx *sql.Tx) error
+	FetchAllChannels() ([]dbmodels.Channel, error)
+	InsertChannel(tx *sql.Tx, channelName string) (int, error)
+	DeleteAllChannels(tx *sql.Tx) error
 	BeginTx() (*sql.Tx, error)
 }
 
@@ -25,7 +25,7 @@ func (r *channelRepository) BeginTx() (*sql.Tx, error) {
 	return r.db.Begin()
 }
 
-func (r *channelRepository) GetChannels() ([]dbmodels.Channel, error) {
+func (r *channelRepository) FetchAllChannels() ([]dbmodels.Channel, error) {
 	rows, err := r.db.Query("SELECT id, name FROM channels")
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (r *channelRepository) GetChannels() ([]dbmodels.Channel, error) {
 	return channels, rows.Err()
 }
 
-func (r *channelRepository) SaveChannel(tx *sql.Tx, channelName string) (int, error) {
+func (r *channelRepository) InsertChannel(tx *sql.Tx, channelName string) (int, error) {
 	exec := r.db.Exec
 	if tx != nil {
 		exec = tx.Exec
@@ -59,7 +59,7 @@ func (r *channelRepository) SaveChannel(tx *sql.Tx, channelName string) (int, er
 	return int(id), err
 }
 
-func (r *channelRepository) PurgeChannels(tx *sql.Tx) error {
+func (r *channelRepository) DeleteAllChannels(tx *sql.Tx) error {
 	exec := r.db.Exec
 	if tx != nil {
 		exec = tx.Exec
