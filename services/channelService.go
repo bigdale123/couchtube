@@ -7,11 +7,20 @@ import (
 	repo "github.com/ozencb/couchtube/repositories"
 )
 
-func GetChannels() ([]dbmodels.Channel, error) {
+type ChannelService struct {
+	ChannelRepo repo.ChannelRepository
+	VideoRepo   repo.VideoRepository
+}
 
-	repo := repo.NewChannelRepository()
+func NewChannelService(channelRepo repo.ChannelRepository, videoRepo repo.VideoRepository) *ChannelService {
+	return &ChannelService{
+		ChannelRepo: channelRepo,
+		VideoRepo:   videoRepo,
+	}
+}
 
-	channels, err := repo.GetChannels()
+func (s *ChannelService) GetChannels() ([]dbmodels.Channel, error) {
+	channels, err := s.ChannelRepo.GetChannels()
 
 	if err != nil {
 		return nil, err
@@ -20,11 +29,9 @@ func GetChannels() ([]dbmodels.Channel, error) {
 	return channels, nil
 }
 
-func GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
+func (s *ChannelService) GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
 
-	repo := repo.NewVideoRepository()
-
-	videos, err := repo.GetVideosByChannelID(channelId)
+	videos, err := s.VideoRepo.GetVideosByChannelID(channelId)
 
 	if err != nil {
 		return nil, err
@@ -61,10 +68,8 @@ func GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
 	return &videos[0], nil
 }
 
-func GetNextVideo(channelId int, videoId int) *dbmodels.Video {
-	repo := repo.NewVideoRepository()
-
-	video, err := repo.GetNextVideo(channelId, videoId)
+func (s *ChannelService) GetNextVideo(channelId int, videoId int) *dbmodels.Video {
+	video, err := s.VideoRepo.GetNextVideo(channelId, videoId)
 	if err != nil {
 		return nil
 	}

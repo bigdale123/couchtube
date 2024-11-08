@@ -8,7 +8,19 @@ import (
 	repo "github.com/ozencb/couchtube/repositories"
 )
 
-func SubmitList(list jsonmodels.SubmitListRequestJson) (bool, error) {
+type SubmitListService struct {
+	ChannelRepo repo.ChannelRepository
+	VideoRepo   repo.VideoRepository
+}
+
+func NewSubmitListService(channelRepo repo.ChannelRepository, videoRepo repo.VideoRepository) *SubmitListService {
+	return &SubmitListService{
+		ChannelRepo: channelRepo,
+		VideoRepo:   videoRepo,
+	}
+}
+
+func (s *SubmitListService) SubmitList(list jsonmodels.SubmitListRequestJson) (bool, error) {
 	videoListUrl := list.VideoListUrl
 
 	if videoListUrl == "" {
@@ -30,22 +42,20 @@ func SubmitList(list jsonmodels.SubmitListRequestJson) (bool, error) {
 		return false, nil
 	}
 
-	channelRepo := repo.NewChannelRepository()
-	videoRepo := repo.NewVideoRepository()
+	s.ChannelRepo.PurgeChannels()
 
-	channelRepo.PurgeChannels()
-	videoRepo.PurgeVideos()
+	s.VideoRepo.PurgeVideos()
 
 	for _, channel := range videoList.Channels {
 		println("Inserting channel:", channel.Name)
-		channelId, err := channelRepo.SaveChannel(channel.Name)
+		channelId, err := s.ChannelRepo.SaveChannel(channel.Name)
 
 		if err != nil {
 			return false, err
 		}
 		for _, video := range channel.Videos {
 			println("Inserting video:", channelId, video.Url, video.SegmentStart, video.SegmentEnd)
-			videoRepo.SaveVideo(channelId, video.Url, video.SegmentStart, video.SegmentEnd)
+			s.VideoRepo.SaveVideo(channelId, video.Url, video.SegmentStart, video.SegmentEnd)
 		}
 	}
 

@@ -3,7 +3,6 @@ package repo
 import (
 	"database/sql"
 
-	"github.com/ozencb/couchtube/db"
 	dbmodels "github.com/ozencb/couchtube/models/db"
 )
 
@@ -18,13 +17,7 @@ type videoRepository struct {
 	db *sql.DB
 }
 
-func NewVideoRepository() VideoRepository {
-	db, err := db.GetConnector()
-
-	if err != nil {
-		panic(err)
-	}
-
+func NewVideoRepository(db *sql.DB) VideoRepository {
 	return &videoRepository{db: db}
 }
 

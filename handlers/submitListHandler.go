@@ -8,7 +8,15 @@ import (
 	"github.com/ozencb/couchtube/services"
 )
 
-func SubmitList(w http.ResponseWriter, r *http.Request) {
+type SubmitListHandler struct {
+	Service *services.SubmitListService
+}
+
+func NewSubmitListHandler(service *services.SubmitListService) *SubmitListHandler {
+	return &SubmitListHandler{Service: service}
+}
+
+func (h *SubmitListHandler) SubmitList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -21,7 +29,7 @@ func SubmitList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	success, err := services.SubmitList(list)
+	success, err := h.Service.SubmitList(list)
 	if err != nil {
 		http.Error(w, "Failed to submit list", http.StatusInternalServerError)
 		return

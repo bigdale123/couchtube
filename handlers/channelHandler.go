@@ -9,13 +9,21 @@ import (
 	"github.com/ozencb/couchtube/services"
 )
 
-func GetChannels(w http.ResponseWriter, r *http.Request) {
+type ChannelHandler struct {
+	Service *services.ChannelService
+}
+
+func NewChannelHandler(service *services.ChannelService) *ChannelHandler {
+	return &ChannelHandler{Service: service}
+}
+
+func (h *ChannelHandler) GetChannels(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	channels, err := services.GetChannels()
+	channels, err := h.Service.GetChannels()
 	if err != nil {
 		http.Error(w, "Failed to load channels", http.StatusInternalServerError)
 		return
@@ -26,7 +34,7 @@ func GetChannels(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"channels": channels})
 }
 
-func GetCurrentVideo(w http.ResponseWriter, r *http.Request) {
+func (h *ChannelHandler) GetCurrentVideo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -53,14 +61,14 @@ func GetCurrentVideo(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid video-id", http.StatusBadRequest)
 			return
 		}
-		video = services.GetNextVideo(channelIDInt, videoIDInt)
+		video = h.Service.GetNextVideo(channelIDInt, videoIDInt)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"video": video})
 		return
 	} else {
 		// if videoId is not provided, call GetCurrentVideoByChannelId
-		video, err = services.GetCurrentVideoByChannelId(channelIDInt)
+		video, err = h.Service.GetCurrentVideoByChannelId(channelIDInt)
 		if err != nil {
 			http.Error(w, "Failed to load video", http.StatusInternalServerError)
 			return
