@@ -2,8 +2,8 @@ package jsonmodels
 
 type VideoJson struct {
 	Url          string `json:"url"`
-	SegmentStart int    `json:"segment_start"`
-	SegmentEnd   int    `json:"segment_end"`
+	SegmentStart int    `json:"segmentStart"`
+	SegmentEnd   int    `json:"segmentEnd"`
 }
 
 type ChannelJson struct {

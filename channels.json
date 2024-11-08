@@ -5,13 +5,13 @@
       "videos": [
         {
           "url": "https://www.youtube.com/watch?v=TGz4Osgk7AQ",
-          "segment_start": 10,
-          "segment_end": 30
+          "segmentStart": 10,
+          "segmentEnd": 30
         },
         {
           "url": "https://www.youtube.com/watch?v=42FhQWQ6SVA",
-          "segment_start": 4,
-          "segment_end": 40
+          "segmentStart": 4,
+          "segmentEnd": 40
         }
       ]
     },
@@ -20,18 +20,18 @@
       "videos": [
         {
           "url": "https://www.youtube.com/watch?v=f8CXG7dS-D0",
-          "segment_start": 30,
-          "segment_end": 50
+          "segmentStart": 30,
+          "segmentEnd": 50
         },
         {
           "url": "https://www.youtube.com/watch?v=UYW1lKNVI90",
-          "segment_start": 50,
-          "segment_end": 70
+          "segmentStart": 50,
+          "segmentEnd": 70
         },
         {
           "url": "https://www.youtube.com/watch?v=pYeRS5a3HbE",
-          "segment_start": 10,
-          "segment_end": 30
+          "segmentStart": 10,
+          "segmentEnd": 30
         }
       ]
     }
