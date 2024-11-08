@@ -27,10 +27,12 @@ func (s *SubmitListService) SubmitList(list jsonmodels.SubmitListRequestJson) (b
 		return false, nil
 	}
 
+	// Fetch the video list from the provided URL
 	response, err := http.Get(videoListUrl)
 	if err != nil {
 		return false, err
 	}
+	defer response.Body.Close()
 
 	var videoList jsonmodels.ChannelsJson
 	err = json.NewDecoder(response.Body).Decode(&videoList)
@@ -42,20 +44,38 @@ func (s *SubmitListService) SubmitList(list jsonmodels.SubmitListRequestJson) (b
 		return false, nil
 	}
 
-	s.ChannelRepo.PurgeChannels()
+	// Begin a transaction
+	tx, err := s.ChannelRepo.BeginTx()
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback() // Roll back if there's an error
+		} else {
+			tx.Commit() // Commit if everything succeeds
+		}
+	}()
 
-	s.VideoRepo.PurgeVideos()
+	// Purge existing channels and videos
+	if err = s.ChannelRepo.PurgeChannels(tx); err != nil {
+		return false, err
+	}
+	if err = s.VideoRepo.PurgeVideos(tx); err != nil {
+		return false, err
+	}
 
+	// Insert new channels and videos
 	for _, channel := range videoList.Channels {
-		println("Inserting channel:", channel.Name)
-		channelId, err := s.ChannelRepo.SaveChannel(channel.Name)
-
+		channelID, err := s.ChannelRepo.SaveChannel(tx, channel.Name)
 		if err != nil {
 			return false, err
 		}
 		for _, video := range channel.Videos {
-			println("Inserting video:", channelId, video.Url, video.SegmentStart, video.SegmentEnd)
-			s.VideoRepo.SaveVideo(channelId, video.Url, video.SegmentStart, video.SegmentEnd)
+			err = s.VideoRepo.SaveVideo(tx, channelID, video.Url, video.SegmentStart, video.SegmentEnd)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 

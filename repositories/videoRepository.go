@@ -9,8 +9,9 @@ import (
 type VideoRepository interface {
 	GetVideosByChannelID(channelID int) ([]dbmodels.Video, error)
 	GetNextVideo(videoID int, channelID int) (*dbmodels.Video, error)
-	SaveVideo(channelID int, videoUrl string, segmentStart int, segmentEnd int) error
-	PurgeVideos() error
+	SaveVideo(tx *sql.Tx, channelID int, videoUrl string, segmentStart int, segmentEnd int) error
+	PurgeVideos(tx *sql.Tx) error
+	BeginTx() (*sql.Tx, error)
 }
 
 type videoRepository struct {
@@ -19,6 +20,10 @@ type videoRepository struct {
 
 func NewVideoRepository(db *sql.DB) VideoRepository {
 	return &videoRepository{db: db}
+}
+
+func (r *videoRepository) BeginTx() (*sql.Tx, error) {
+	return r.db.Begin()
 }
 
 func (r *videoRepository) GetVideosByChannelID(channelID int) ([]dbmodels.Video, error) {
@@ -80,8 +85,13 @@ func (r *videoRepository) GetNextVideo(videoID int, channelID int) (*dbmodels.Vi
 	return &video, nil
 }
 
-func (r *videoRepository) SaveVideo(channelID int, videoUrl string, segmentStart int, segmentEnd int) error {
-	_, err := r.db.Exec(`
+func (r *videoRepository) SaveVideo(tx *sql.Tx, channelID int, videoUrl string, segmentStart int, segmentEnd int) error {
+	exec := r.db.Exec
+	if tx != nil {
+		exec = tx.Exec
+	}
+
+	_, err := exec(`
 		INSERT INTO videos (channel_id, url, segment_start, segment_end)
 		VALUES (?, ?, ?, ?)
 	`, channelID, videoUrl, segmentStart, segmentEnd)
@@ -89,7 +99,12 @@ func (r *videoRepository) SaveVideo(channelID int, videoUrl string, segmentStart
 	return err
 }
 
-func (r *videoRepository) PurgeVideos() error {
-	_, err := r.db.Exec(`DELETE FROM videos`)
+func (r *videoRepository) PurgeVideos(tx *sql.Tx) error {
+	exec := r.db.Exec
+	if tx != nil {
+		exec = tx.Exec
+	}
+
+	_, err := exec("DELETE FROM videos")
 	return err
 }

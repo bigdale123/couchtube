@@ -8,8 +8,9 @@ import (
 
 type ChannelRepository interface {
 	GetChannels() ([]dbmodels.Channel, error)
-	SaveChannel(channelName string) (int, error)
-	PurgeChannels() error
+	SaveChannel(tx *sql.Tx, channelName string) (int, error)
+	PurgeChannels(tx *sql.Tx) error
+	BeginTx() (*sql.Tx, error)
 }
 
 type channelRepository struct {
@@ -18,6 +19,10 @@ type channelRepository struct {
 
 func NewChannelRepository(db *sql.DB) ChannelRepository {
 	return &channelRepository{db: db}
+}
+
+func (r *channelRepository) BeginTx() (*sql.Tx, error) {
+	return r.db.Begin()
 }
 
 func (r *channelRepository) GetChannels() ([]dbmodels.Channel, error) {
@@ -36,31 +41,30 @@ func (r *channelRepository) GetChannels() ([]dbmodels.Channel, error) {
 		channels = append(channels, channel)
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return channels, nil
+	return channels, rows.Err()
 }
 
-func (r *channelRepository) SaveChannel(channelName string) (int, error) {
-	result, err := r.db.Exec("INSERT INTO channels (name) VALUES (?) RETURNING id", channelName)
+func (r *channelRepository) SaveChannel(tx *sql.Tx, channelName string) (int, error) {
+	exec := r.db.Exec
+	if tx != nil {
+		exec = tx.Exec
+	}
+
+	result, err := exec("INSERT INTO channels (name) VALUES (?) RETURNING id", channelName)
 	if err != nil {
 		return 0, err
 	}
 
 	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-
-	return int(id), nil
+	return int(id), err
 }
 
-func (r *channelRepository) PurgeChannels() error {
-	_, err := r.db.Exec("DELETE FROM channels")
-	if err != nil {
-		return err
+func (r *channelRepository) PurgeChannels(tx *sql.Tx) error {
+	exec := r.db.Exec
+	if tx != nil {
+		exec = tx.Exec
 	}
-	return nil
+
+	_, err := exec("DELETE FROM channels")
+	return err
 }
