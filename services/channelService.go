@@ -30,9 +30,7 @@ func (s *ChannelService) GetChannels() ([]dbmodels.Channel, error) {
 }
 
 func (s *ChannelService) GetCurrentVideoByChannelId(channelId int) (*dbmodels.Video, error) {
-
 	videos, err := s.VideoRepo.GetVideosByChannelID(channelId)
-
 	if err != nil {
 		return nil, err
 	}
@@ -41,31 +39,31 @@ func (s *ChannelService) GetCurrentVideoByChannelId(channelId int) (*dbmodels.Vi
 		return nil, nil
 	}
 
-	// get total video length
-	totalLengthInSeconds := 0
+	totalLength := int64(0)
 	for _, video := range videos {
-		totalLengthInSeconds += video.SegmentEnd - video.SegmentStart
+		totalLength += int64(video.SegmentEnd - video.SegmentStart)
 	}
 
-	// get seconds elapsed since the beginning of the day
-	secondsElapsed := time.Now().Hour()*3600 + time.Now().Minute()*60 + time.Now().Second()
+	currentPoint := time.Now().UTC().Unix() % totalLength
+	videoIndex := -1
 
-	indexSeconds := secondsElapsed % totalLengthInSeconds
+	for i := range videos {
+		video := &videos[i]
+		segmentLength := int64(video.SegmentEnd - video.SegmentStart)
 
-	// find the video to be played and update the segment start time
-	for _, video := range videos {
-		totalLengthInSeconds -= video.SegmentEnd - video.SegmentStart
-		if totalLengthInSeconds <= indexSeconds && indexSeconds < (video.SegmentEnd-video.SegmentStart) {
-			if indexSeconds > 0 {
-				video.SegmentStart = video.SegmentStart + indexSeconds // wind the video forward to the correct position
-			}
-			return &video, nil
+		if currentPoint < segmentLength {
+			videoIndex = i
+			video.SegmentStart += int(currentPoint) // Adjust start to match the current second
+			break
 		}
+		currentPoint -= segmentLength
 	}
 
-	println("No video found to play")
+	if videoIndex == -1 {
+		return &videos[0], nil
+	}
 
-	return &videos[0], nil
+	return &videos[videoIndex], nil
 }
 
 func (s *ChannelService) GetNextVideo(channelId int, videoId int) *dbmodels.Video {
