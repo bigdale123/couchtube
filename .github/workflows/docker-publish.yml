@@ -34,6 +34,7 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/couchtube:latest
+          platforms: linux/amd64,linux/arm64
           file: Dockerfile
 
       # Optional: Clear Docker cache
