@@ -9,6 +9,8 @@ import (
 
 type ChannelRepository interface {
 	GetChannels() ([]dbmodels.Channel, error)
+	SaveChannel(channelName string) (int, error)
+	PurgeChannels() error
 }
 
 type channelRepository struct {
@@ -45,4 +47,26 @@ func (r *channelRepository) GetChannels() ([]dbmodels.Channel, error) {
 	}
 
 	return channels, nil
+}
+
+func (r *channelRepository) SaveChannel(channelName string) (int, error) {
+	result, err := r.db.Exec("INSERT INTO channels (name) VALUES (?) RETURNING id", channelName)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return int(id), nil
+}
+
+func (r *channelRepository) PurgeChannels() error {
+	_, err := r.db.Exec("DELETE FROM channels")
+	if err != nil {
+		return err
+	}
+	return nil
 }

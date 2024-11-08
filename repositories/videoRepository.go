@@ -10,6 +10,8 @@ import (
 type VideoRepository interface {
 	GetVideosByChannelID(channelID int) ([]dbmodels.Video, error)
 	GetNextVideo(videoID int, channelID int) (*dbmodels.Video, error)
+	SaveVideo(channelID int, videoUrl string, segmentStart int, segmentEnd int) error
+	PurgeVideos() error
 }
 
 type videoRepository struct {
@@ -83,4 +85,18 @@ func (r *videoRepository) GetNextVideo(videoID int, channelID int) (*dbmodels.Vi
 	}
 
 	return &video, nil
+}
+
+func (r *videoRepository) SaveVideo(channelID int, videoUrl string, segmentStart int, segmentEnd int) error {
+	_, err := r.db.Exec(`
+		INSERT INTO videos (channel_id, url, segment_start, segment_end)
+		VALUES (?, ?, ?, ?)
+	`, channelID, videoUrl, segmentStart, segmentEnd)
+
+	return err
+}
+
+func (r *videoRepository) PurgeVideos() error {
+	_, err := r.db.Exec(`DELETE FROM videos`)
+	return err
 }

@@ -65,24 +65,46 @@
       <div id="volume-bar"></div>
     </div>
 
-    <div id="info-modal-container">
-      <div id="info-modal">
-        <div id="info-modal-title">
-          <div id="info-modal-close-button">
+    <div id="info-modal-container" class="modal-container">
+      <div id="info-modal" class="modal-body">
+        <div id="info-modal-title" class="modal-title">
+          <div>Info</div>
+          <div id="info-modal-close-button" class="modal-close-button">
             <img src="/assets/icons/cross.svg" />
           </div>
         </div>
 
-        <div class="info-modal-content">
+        <div class="modal-content">
           <div id="video-link">
             <div id="video-link-title"></div>
             <img src="/assets/icons/external.svg" />
           </div>
+          <div>Channels</div>
           <div id="channel-list"></div>
         </div>
       </div>
     </div>
 
+    <div id="settings-modal-container" class="modal-container">
+      <div id="settings-modal" class="modal-body">
+        <div id="settings-modal-title" class="modal-title">
+          <div>Settings</div>
+          <div id="settings-modal-close-button" class="modal-close-button">
+            <img src="/assets/icons/cross.svg" />
+          </div>
+        </div>
+
+        <div class="modal-content">
+          <div class="">Provide Your Own Videos</div>
+          <input
+            type="text"
+            id="video-list-input"
+            placeholder="Enter a channel/video list URL"
+          />
+          <button id="video-list-submit">Submit</button>
+        </div>
+      </div>
+    </div>
     <script src="script.js"></script>
   </body>
 </html>

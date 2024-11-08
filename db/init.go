@@ -26,16 +26,15 @@ func InitTables() {
 		FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
 		CHECK (segment_end > segment_start)
 	);`
-
 	createChannelsTableQuery := `CREATE TABLE IF NOT EXISTS channels (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 		"name" TEXT,
 		UNIQUE(name)
 	);`
-
 	createIndexesQuery := `CREATE INDEX IF NOT EXISTS idx_videos_channel_id ON videos(channel_id);`
+	enableForeignKeysQuery := `PRAGMA foreign_keys = ON;`
 
-	_, err = db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery)
+	_, err = db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery + enableForeignKeysQuery)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,6 +44,7 @@ func InitTables() {
 
 func PopulateDatabase() {
 	// parse the json file and insert the data into the database
+	// ignore if there are channels already defined
 
 	channels, err := helpers.LoadJSONFromFile[jsonmodels.ChannelsJson]("/channels.json")
 	if err != nil {
@@ -56,6 +56,18 @@ func PopulateDatabase() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
+	// check if anything already exists in channels
+	var exists int
+	err = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM channels LIMIT 1);`).Scan(&exists)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if exists == 1 {
+		log.Println("Data already exists in the database. Skipping db population")
+		return
+	}
 
 	insertChannelQuery := `INSERT OR IGNORE INTO channels (name) VALUES (?)`
 	insertVideoQuery := `INSERT OR IGNORE INTO videos (channel_id, url, segment_start, segment_end) VALUES (?, ?, ?, ?)`

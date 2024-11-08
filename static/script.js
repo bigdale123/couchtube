@@ -2,6 +2,7 @@ const IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
 const BUFFERING_TIMEOUT = 3500;
 const CHANNELS_ENDPOINT = '/channels';
 const CURRENT_VIDEO_ENDPOINT = '/current-video';
+const SUBMIT_VIDEO_ENDPOINT = '/submit-list';
 const VOLUME_STEPS = 5;
 const VOLUME_BAR_TIMEOUT = 2000;
 const CHANNEL_NAME_TIMEOUT = 3000;
@@ -260,6 +261,42 @@ const toggleInfoModal = () => {
   });
 };
 
+const closeSettingsModal = () => {
+  const settingsPopup = document.querySelector('#settings-modal-container');
+  settingsPopup.classList.remove('active');
+};
+
+const toggleSettingsModal = () => {
+  const settingsPopup = document.querySelector('#settings-modal-container');
+  settingsPopup.classList.toggle('active');
+
+  settingsPopup.addEventListener('click', (event) => {
+    if (event.target === settingsPopup) {
+      closeSettingsModal();
+    }
+  });
+};
+
+const submitVideoLink = async () => {
+  const videoListInput = document.querySelector('#video-list-input');
+  const videoListUrl = videoListInput.value;
+
+  console.log(videoListUrl);
+
+  const res = await fetch(SUBMIT_VIDEO_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ videoListUrl })
+  });
+  const data = await res.json();
+  if (data.success) {
+    videoListInput.value = '';
+    closeSettingsModal();
+  }
+};
+
 const addEventListeners = (state) => {
   // Add Event Listeners for all buttons
   const controls = {
@@ -317,6 +354,9 @@ const addEventListeners = (state) => {
     },
     info: () => {
       toggleInfoModal();
+    },
+    settings: () => {
+      toggleSettingsModal();
     }
   };
 
@@ -336,8 +376,18 @@ const addEventListeners = (state) => {
       closeInfoModal();
     });
 
+  document
+    .querySelector('#settings-modal-close-button')
+    .addEventListener('click', () => {
+      closeSettingsModal();
+    });
+
   document.querySelector('#video-link').addEventListener('click', () => {
     window.open(state.currentVideo.url, '_blank');
+  });
+
+  document.querySelector('#video-list-submit').addEventListener('click', () => {
+    submitVideoLink();
   });
 };
 

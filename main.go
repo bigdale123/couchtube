@@ -13,6 +13,7 @@ func main() {
 	http.Handle("/", middleware.CORSMiddleware(http.FileServer(http.Dir("./static"))))
 	http.Handle("/channels", middleware.CORSMiddleware(http.HandlerFunc(handlers.GetChannels)))
 	http.Handle("/current-video", middleware.CORSMiddleware(http.HandlerFunc(handlers.GetCurrentVideo)))
+	http.Handle("/submit-list", middleware.CORSMiddleware(http.HandlerFunc(handlers.SubmitList)))
 
 	db.InitTables()
 	db.PopulateDatabase()
