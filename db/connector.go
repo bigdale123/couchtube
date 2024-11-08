@@ -5,33 +5,49 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	_ "modernc.org/sqlite"
 )
 
+var (
+	dbInstance *sql.DB
+	once       sync.Once
+)
+
 func GetConnector() (*sql.DB, error) {
-	dbFilePath := "couchtube.db"
+	var err error
+	once.Do(func() {
+		dbFilePath := "couchtube.db"
 
-	if _, err := os.Stat(dbFilePath); os.IsNotExist(err) {
-		file, err := os.Create(dbFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create database file: %w", err)
+		// Create the database file if it doesn't exist
+		if _, err := os.Stat(dbFilePath); os.IsNotExist(err) {
+			file, err := os.Create(dbFilePath)
+			if err != nil {
+				log.Fatalf("Failed to create database file: %v", err)
+			}
+			file.Close()
+			log.Printf("Created new SQLite database file at %s", dbFilePath)
 		}
-		file.Close()
-		log.Printf("Created new SQLite database file at %s", dbFilePath)
-	}
 
-	dsn := fmt.Sprintf("file:%s?cache=shared", dbFilePath)
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
+		// Open the database
+		dsn := fmt.Sprintf("file:%s?cache=shared", dbFilePath)
+		dbInstance, err = sql.Open("sqlite", dsn)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
 
-	// verify the connection
-	if err = db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
+		// Enable foreign key constraints
+		if _, err = dbInstance.Exec("PRAGMA foreign_keys = ON;"); err != nil {
+			log.Fatalf("Failed to enable foreign keys: %v", err)
+		}
 
-	return db, nil
+		// Test the database connection
+		if err = dbInstance.Ping(); err != nil {
+			dbInstance.Close()
+			log.Fatalf("Failed to ping database: %v", err)
+		}
+	})
+
+	return dbInstance, err
 }

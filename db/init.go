@@ -32,9 +32,8 @@ func InitTables() {
 		UNIQUE(name)
 	);`
 	createIndexesQuery := `CREATE INDEX IF NOT EXISTS idx_videos_channel_id ON videos(channel_id);`
-	enableForeignKeysQuery := `PRAGMA foreign_keys = ON;`
 
-	_, err = db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery + enableForeignKeysQuery)
+	_, err = db.Exec(createChannelsTableQuery + createVideosTableQuery + createIndexesQuery)
 	if err != nil {
 		log.Fatal(err)
 	}
