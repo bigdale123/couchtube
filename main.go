@@ -13,12 +13,12 @@ import (
 )
 
 func main() {
-	// Initialize database
-	dbInstance, err := db.GetConnector()
+	// Initialize the database
+	dbInstance, err := db.GetDbConnection()
 	if err != nil {
 		log.Fatalf("Database initialization failed: %v", err)
 	}
-	defer dbInstance.Close()
+	defer db.CloseConnector()
 
 	db.InitDatabase(dbInstance)
 

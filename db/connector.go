@@ -13,9 +13,10 @@ import (
 var (
 	dbInstance *sql.DB
 	once       sync.Once
+	closeOnce  sync.Once
 )
 
-func GetConnector() (*sql.DB, error) {
+func GetDbConnection() (*sql.DB, error) {
 	var err error
 	once.Do(func() {
 		dbFilePath := "couchtube.db"
@@ -55,5 +56,18 @@ func GetConnector() (*sql.DB, error) {
 		return nil, err
 	}
 
-	return dbInstance, nil
+	return dbInstance, err
+}
+
+func CloseConnector() {
+	closeOnce.Do(func() {
+		if dbInstance != nil {
+			if err := dbInstance.Close(); err != nil {
+				log.Printf("Error closing the database connection: %v", err)
+			} else {
+				log.Println("Database connection closed successfully.")
+			}
+			dbInstance = nil // Ensure we don't try to close it again
+		}
+	})
 }
