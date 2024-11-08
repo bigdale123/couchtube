@@ -29,6 +29,11 @@ func (h *SubmitListHandler) SubmitList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if list.VideoListUrl == "" {
+		http.Error(w, "videoListUrl is required", http.StatusBadRequest)
+		return
+	}
+
 	success, err := h.Service.SubmitList(list)
 	if err != nil {
 		http.Error(w, "Failed to submit list", http.StatusInternalServerError)
