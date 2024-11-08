@@ -70,5 +70,4 @@ func GetNextVideo(channelId int, videoId int) *dbmodels.Video {
 	}
 
 	return video
-
 }
