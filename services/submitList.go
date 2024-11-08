@@ -37,13 +37,14 @@ func SubmitList(list jsonmodels.SubmitListRequestJson) (bool, error) {
 	videoRepo.PurgeVideos()
 
 	for _, channel := range videoList.Channels {
+		println("Inserting channel:", channel.Name)
 		channelId, err := channelRepo.SaveChannel(channel.Name)
 
 		if err != nil {
 			return false, err
 		}
 		for _, video := range channel.Videos {
-			println(channelId, video.Url, video.SegmentStart, video.SegmentEnd)
+			println("Inserting video:", channelId, video.Url, video.SegmentStart, video.SegmentEnd)
 			videoRepo.SaveVideo(channelId, video.Url, video.SegmentStart, video.SegmentEnd)
 		}
 	}
