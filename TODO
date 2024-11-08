@@ -1,1 +1,4 @@
-- Invalidate videoes that cannot be played
+- docker images with pipeline
+- proxy support
+- self signed certs
+- env file support
