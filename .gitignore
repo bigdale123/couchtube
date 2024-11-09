@@ -19,6 +19,3 @@ Godeps/
 
 # Ignore database files
 *.db
-
-# env
-.env
