@@ -25,8 +25,18 @@ services:
     image: ghcr.io/ozencb/couchtube:latest
     container_name: couchtube_app
     ports:
-      - "8081:8081"
+      - "8081:8081"  
+    environment:
+      - PORT=8081
+      - DATABASE_FILE=/app/data/couchtube.db
+      - READONLY_MODE=false
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 ```
 
 Or start it directly with a `docker run` command:
@@ -35,13 +45,27 @@ Or start it directly with a `docker run` command:
 docker run -d \
   --name couchtube_app \
   -p 8081:8081 \
+  -e PORT=8081 \
+  -e DATABASE_FILE=/app/data/couchtube.db \
+  -e READONLY_MODE=false \
   --restart unless-stopped \
+  --health-cmd="curl -f http://localhost:8081 || exit 1" \
+  --health-interval=30s \
+  --health-timeout=10s \
+  --health-retries=3 \
   ghcr.io/ozencb/couchtube:latest
+
 ```
 
 ### Building From Source
 
-Ensure you have Golang 1.22 or higher installed.
+Ensure you have Golang 1.22 or higher installed. Create a `.env` file with the same environment variables found in `docker-compose.yml`.
+
+```dotenv
+PORT=8081
+DATABASE_FILE=/app/data/couchtube.db
+READONLY_MODE=false
+```
 
 1. **Clone the Repository**:
    ```sh
@@ -65,11 +89,23 @@ Ensure you have Golang 1.22 or higher installed.
 
 On the first run, CouchTube will create a `couchtube.db` SQLite database file, initialize necessary tables, and populate them with any default channels found in `default-channels.json`.
 
+
 ---
 
 ## Usage
 
 CouchTube loops through a channel's videos and only shows the section of the video marked by `sectionStart` and `sectionEnd`. The scheduler aims to distribute these videos throughout the day, so two different users should see the same video for a given channel.
+
+### Environment Variables
+
+You can configure CouchTube using environment variables.
+
+| Variable        | Description                                                                 |
+| --------------- | --------------------------------------------------------------------------- |
+| `PORT`          | The port number on which CouchTube will run.                                |
+| `DATABASE_FILE` | The path to the SQLite database file used by CouchTube.                     |
+| `READONLY_MODE` | If set to `true`, CouchTube will run in read-only mode, preventing changes. |
+
 
 ### Custom JSON Format for Channel and Video Lists
 
