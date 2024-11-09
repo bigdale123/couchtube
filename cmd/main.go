@@ -14,7 +14,6 @@ import (
 
 type Route struct {
 	Path    string
-	Method  string
 	Handler http.HandlerFunc
 	Cors    bool
 }
@@ -50,11 +49,11 @@ func main() {
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 
 	routes := []Route{
-		{Path: "/", Method: "GET", Handler: http.FileServer(http.Dir("./static")).ServeHTTP, Cors: true},
-		{Path: "/channels", Method: "GET", Handler: mediaHandler.FetchAllChannels, Cors: true},
-		{Path: "/current-video", Method: "GET", Handler: mediaHandler.GetCurrentVideo, Cors: true},
-		{Path: "/submit-list", Method: "POST", Handler: mediaHandler.SubmitList, Cors: true},
-		{Path: "/invalidate-video", Method: "DELETE", Handler: mediaHandler.InvalidateVideo, Cors: true},
+		{Path: "/", Handler: http.FileServer(http.Dir("./static")).ServeHTTP, Cors: true},
+		{Path: "/channels", Handler: mediaHandler.FetchAllChannels, Cors: true},
+		{Path: "/current-video", Handler: mediaHandler.GetCurrentVideo, Cors: true},
+		{Path: "/submit-list", Handler: mediaHandler.SubmitList, Cors: true},
+		{Path: "/invalidate-video", Handler: mediaHandler.InvalidateVideo, Cors: true},
 	}
 	registerRoutes(http.DefaultServeMux, routes)
 
