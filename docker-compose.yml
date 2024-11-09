@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   couchtube:
     image: ghcr.io/ozencb/couchtube:latest
