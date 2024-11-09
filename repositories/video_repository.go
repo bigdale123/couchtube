@@ -12,7 +12,6 @@ type VideoRepository interface {
 	SaveVideo(tx *sql.Tx, channelID int, videoUrl string, sectionStart int, sectionEnd int) error
 	DeleteVideo(tx *sql.Tx, videoID int) error
 	DeleteAllVideos(tx *sql.Tx) error
-	BeginTx() (*sql.Tx, error)
 }
 
 type videoRepository struct {
@@ -21,10 +20,6 @@ type videoRepository struct {
 
 func NewVideoRepository(db *sql.DB) VideoRepository {
 	return &videoRepository{db: db}
-}
-
-func (r *videoRepository) BeginTx() (*sql.Tx, error) {
-	return r.db.Begin()
 }
 
 func (r *videoRepository) GetVideosByChannelID(channelID int) ([]dbmodels.Video, error) {

@@ -1,22 +1,26 @@
 package services
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/ozencb/couchtube/db"
 	dbmodels "github.com/ozencb/couchtube/models/db"
 	jsonmodels "github.com/ozencb/couchtube/models/json"
 	repo "github.com/ozencb/couchtube/repositories"
 )
 
 type MediaService struct {
+	TxManager   repo.TxManager
 	ChannelRepo repo.ChannelRepository
 	VideoRepo   repo.VideoRepository
 }
 
-func NewMediaService(channelRepo repo.ChannelRepository, videoRepo repo.VideoRepository) *MediaService {
+func NewMediaService(txManager repo.TxManager, channelRepo repo.ChannelRepository, videoRepo repo.VideoRepository) *MediaService {
 	return &MediaService{
+		TxManager:   txManager,
 		ChannelRepo: channelRepo,
 		VideoRepo:   videoRepo,
 	}
@@ -53,7 +57,6 @@ func (s *MediaService) GetCurrentVideoByChannelId(channelId int) (*dbmodels.Vide
 	for i := range videos {
 		video := &videos[i]
 		sectionLength := int64(video.SectionEnd - video.SectionStart)
-
 		if currentPoint < sectionLength {
 			videoIndex = i
 			video.SectionStart += int(currentPoint) // Adjust start to match the current second
@@ -79,24 +82,20 @@ func (s *MediaService) FetchNextVideo(channelId int, videoId int) *dbmodels.Vide
 }
 
 func (s *MediaService) InvalidateVideo(videoId int) error {
-	tx, err := s.VideoRepo.BeginTx()
+	err := db.WithTransaction(s.TxManager.GetDB(), func(tx *sql.Tx) error {
+		if err := s.VideoRepo.DeleteVideo(tx, videoId); err != nil {
+			println(1, err)
+			return err
+		}
+		return nil // No error, commit
+	})
 
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-
-	if err = s.VideoRepo.DeleteVideo(tx, videoId); err != nil {
-		return err
-	}
 
 	return nil
+
 }
 
 func (s *MediaService) SubmitList(list jsonmodels.SubmitListRequestJson) (bool, error) {
@@ -114,8 +113,7 @@ func (s *MediaService) SubmitList(list jsonmodels.SubmitListRequestJson) (bool, 
 	defer response.Body.Close()
 
 	var videoList jsonmodels.ChannelsJson
-	err = json.NewDecoder(response.Body).Decode(&videoList)
-	if err != nil {
+	if err := json.NewDecoder(response.Body).Decode(&videoList); err != nil {
 		return false, err
 	}
 
@@ -123,39 +121,30 @@ func (s *MediaService) SubmitList(list jsonmodels.SubmitListRequestJson) (bool, 
 		return false, nil
 	}
 
-	// Begin a transaction
-	tx, err := s.ChannelRepo.BeginTx()
-	if err != nil {
-		return false, err
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback() // Roll back if there's an error
-		} else {
-			tx.Commit() // Commit if everything succeeds
+	err = db.WithTransaction(s.TxManager.GetDB(), func(tx *sql.Tx) error {
+		if err := s.ChannelRepo.DeleteAllChannels(tx); err != nil {
+			return err
 		}
-	}()
-
-	// Purge existing channels and videos
-	if err = s.ChannelRepo.DeleteAllChannels(tx); err != nil {
-		return false, err
-	}
-	if err = s.VideoRepo.DeleteAllVideos(tx); err != nil {
-		return false, err
-	}
-
-	// Insert new channels and videos
-	for _, channel := range videoList.Channels {
-		channelID, err := s.ChannelRepo.InsertChannel(tx, channel.Name)
-		if err != nil {
-			return false, err
+		if err := s.VideoRepo.DeleteAllVideos(tx); err != nil {
+			return err
 		}
-		for _, video := range channel.Videos {
-			err = s.VideoRepo.SaveVideo(tx, channelID, video.Url, video.SectionStart, video.SectionEnd)
+
+		for _, channel := range videoList.Channels {
+			channelID, err := s.ChannelRepo.InsertChannel(tx, channel.Name)
 			if err != nil {
-				return false, err
+				return err
+			}
+			for _, video := range channel.Videos {
+				if err := s.VideoRepo.SaveVideo(tx, channelID, video.Url, video.SectionStart, video.SectionEnd); err != nil {
+					return err
+				}
 			}
 		}
+		return nil // No error, commit
+	})
+
+	if err != nil {
+		return false, err
 	}
 
 	return true, nil

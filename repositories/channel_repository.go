@@ -10,7 +10,6 @@ type ChannelRepository interface {
 	FetchAllChannels() ([]dbmodels.Channel, error)
 	InsertChannel(tx *sql.Tx, channelName string) (int, error)
 	DeleteAllChannels(tx *sql.Tx) error
-	BeginTx() (*sql.Tx, error)
 }
 
 type channelRepository struct {

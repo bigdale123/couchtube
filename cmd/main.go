@@ -42,11 +42,12 @@ func main() {
 	db.InitDatabase(dbInstance)
 
 	// Initialize Repositories
+	txManager := repo.NewTxManager(dbInstance)
 	channelRepo := repo.NewChannelRepository(dbInstance)
 	videoRepo := repo.NewVideoRepository(dbInstance)
 
 	// Initialize Services
-	mediaService := services.NewMediaService(channelRepo, videoRepo)
+	mediaService := services.NewMediaService(txManager, channelRepo, videoRepo)
 
 	// Initialize Handlers with services
 	mediaHandler := handlers.NewMediaHandler(mediaService)
