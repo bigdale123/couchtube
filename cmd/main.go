@@ -6,7 +6,6 @@ import (
 
 	"github.com/ozencb/couchtube/db"
 	"github.com/ozencb/couchtube/handlers"
-	middleware "github.com/ozencb/couchtube/middleware"
 
 	repo "github.com/ozencb/couchtube/repositories"
 	"github.com/ozencb/couchtube/services"
@@ -15,15 +14,11 @@ import (
 type Route struct {
 	Path    string
 	Handler http.HandlerFunc
-	Cors    bool
 }
 
 func registerRoutes(mux *http.ServeMux, routes []Route) {
 	for _, route := range routes {
 		handler := route.Handler
-		if route.Cors {
-			handler = middleware.CORSMiddleware(handler).(http.HandlerFunc)
-		}
 		mux.Handle(route.Path, handler)
 	}
 }
@@ -49,11 +44,11 @@ func main() {
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 
 	routes := []Route{
-		{Path: "/", Handler: http.FileServer(http.Dir("./static")).ServeHTTP, Cors: true},
-		{Path: "/channels", Handler: mediaHandler.FetchAllChannels, Cors: true},
-		{Path: "/current-video", Handler: mediaHandler.GetCurrentVideo, Cors: true},
-		{Path: "/submit-list", Handler: mediaHandler.SubmitList, Cors: true},
-		{Path: "/invalidate-video", Handler: mediaHandler.InvalidateVideo, Cors: true},
+		{Path: "/", Handler: http.FileServer(http.Dir("./static")).ServeHTTP},
+		{Path: "/channels", Handler: mediaHandler.FetchAllChannels},
+		{Path: "/current-video", Handler: mediaHandler.GetCurrentVideo},
+		{Path: "/submit-list", Handler: mediaHandler.SubmitList},
+		{Path: "/invalidate-video", Handler: mediaHandler.InvalidateVideo},
 	}
 	registerRoutes(http.DefaultServeMux, routes)
 
