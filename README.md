@@ -69,6 +69,8 @@ On the first run, CouchTube will create a `couchtube.db` SQLite database file, i
 
 ## Usage
 
+CouchTube loops through a channel's videos and only shows the section of the video marked by `sectionStart` and `sectionEnd`. The scheduler aims to distribute these videos throughout the day, so two different users should see the same video for a given channel.
+
 ### Custom JSON Format for Channel and Video Lists
 
 You can create custom JSON files to specify channels and video lists.
@@ -85,13 +87,13 @@ Create your JSON file using the following format:
       "videos": [
         {
           "url": "https://www.youtube.com/watch?v=VIDEO_ID",
-          "segmentStart": 10,
-          "segmentEnd": 300
+          "sectionStart": 10,
+          "sectionEnd": 300
         },
         {
           "url": "https://www.youtube.com/watch?v=ANOTHER_VIDEO_ID",
-          "segmentStart": 0,
-          "segmentEnd": 200
+          "sectionStart": 0,
+          "sectionEnd": 200
         }
       ]
     },
@@ -100,8 +102,8 @@ Create your JSON file using the following format:
       "videos": [
         {
           "url": "https://www.youtube.com/watch?v=DIFFERENT_VIDEO_ID",
-          "segmentStart": 0,
-          "segmentEnd": 150
+          "sectionStart": 0,
+          "sectionEnd": 150
         }
       ]
     }
@@ -112,13 +114,12 @@ Create your JSON file using the following format:
 #### Field Descriptions
 
 - **channels**: An array of channel objects. Each channel contains:
-  - **name**: The channel name (string).
+  - **name**: The channel name.
   - **videos**: An array of video objects containing:
-    - **url**: The URL of the YouTube video (required).
-    - **segmentStart**: The start time (in seconds) within the video where playback begins.
-    - **segmentEnd**: The end time (in seconds) within the video where playback ends.
+    - **url**: The URL of the YouTube video.
+    - **sectionStart**: The start time (in seconds) within the video where playback begins.
+    - **sectionEnd**: The end time (in seconds) within the video where playback ends.
 
-#### Example JSON File
 
 Save your custom JSON file using the above structure or make it accessible through a URL.
 

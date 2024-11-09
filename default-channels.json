@@ -1,39 +1,22 @@
 {
   "channels": [
     {
-      "name": "Education",
-      "videos": [
-        {
-          "url": "https://www.youtube.com/watch?v=TGz4Osgk7AQ",
-          "segmentStart": 10,
-          "segmentEnd": 30
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=42FhQWQ6SVA",
-          "segmentStart": 4,
-          "segmentEnd": 40
-        }
-      ]
-    },
-    {
       "name": "Science",
       "videos": [
         {
           "url": "https://www.youtube.com/watch?v=f8CXG7dS-D0",
-          "segmentStart": 30,
-          "segmentEnd": 50
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=UYW1lKNVI90",
-          "segmentStart": 50,
-          "segmentEnd": 70
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=pYeRS5a3HbE",
-          "segmentStart": 10,
-          "segmentEnd": 30
+          "sectionStart": 25,
+          "sectionEnd": 1492
         }
       ]
+    },
+    {
+      "name": "Documentary",
+      "videos": []
+    },
+    {
+      "name": "Motorsports",
+      "videos": []
     }
   ]
 }

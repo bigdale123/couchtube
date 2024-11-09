@@ -1,1 +1,4 @@
 - env file support
+- Readonly mode
+- Caching
+- Deploy a demo app

@@ -243,7 +243,7 @@ const changeChannel = async (player, channels, currentChannel, offset) => {
   if (newVideo) {
     const videoId = extractVideoId(newVideo.url);
     if (videoId) {
-      player.cueVideoById({ videoId, startSeconds: newVideo.segmentStart });
+      player.cueVideoById({ videoId, startSeconds: newVideo.sectionStart });
       player.mute();
       player.playVideo();
     }
@@ -257,7 +257,7 @@ const jumpToChannel = async (player, channels, channelId) => {
   if (newVideo) {
     const videoId = extractVideoId(newVideo.url);
     if (videoId) {
-      player.cueVideoById({ videoId, startSeconds: newVideo.segmentStart });
+      player.cueVideoById({ videoId, startSeconds: newVideo.sectionStart });
       player.mute();
       player.playVideo();
     }
@@ -435,7 +435,7 @@ const initApp = async (playerElementId) => {
       if (videoId) {
         state.player.cueVideoById({
           videoId,
-          startSeconds: initialVideo.segmentStart
+          startSeconds: initialVideo.sectionStart
         });
         state.player.playVideo();
         state.currentVideo = initialVideo;
@@ -459,7 +459,7 @@ const initApp = async (playerElementId) => {
 
       const intervalId = setInterval(async () => {
         const currentTime = state.player.getCurrentTime();
-        if (currentTime >= state.currentVideo.segmentEnd) {
+        if (currentTime >= state.currentVideo.sectionEnd) {
           clearInterval(intervalId);
           const { newChannel, newVideo } = await changeChannel(
             state.player,

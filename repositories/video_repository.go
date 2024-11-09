@@ -9,7 +9,7 @@ import (
 type VideoRepository interface {
 	GetVideosByChannelID(channelID int) ([]dbmodels.Video, error)
 	FetchNextVideo(videoID int, channelID int) (*dbmodels.Video, error)
-	SaveVideo(tx *sql.Tx, channelID int, videoUrl string, segmentStart int, segmentEnd int) error
+	SaveVideo(tx *sql.Tx, channelID int, videoUrl string, sectionStart int, sectionEnd int) error
 	DeleteVideo(tx *sql.Tx, videoID int) error
 	DeleteAllVideos(tx *sql.Tx) error
 	BeginTx() (*sql.Tx, error)
@@ -29,7 +29,7 @@ func (r *videoRepository) BeginTx() (*sql.Tx, error) {
 
 func (r *videoRepository) GetVideosByChannelID(channelID int) ([]dbmodels.Video, error) {
 	rows, err := r.db.Query(`
-        SELECT id, channel_id, url, segment_start, segment_end
+        SELECT id, channel_id, url, section_start, section_end
         FROM videos
         WHERE channel_id = ?
     `, channelID)
@@ -41,7 +41,7 @@ func (r *videoRepository) GetVideosByChannelID(channelID int) ([]dbmodels.Video,
 	var videos []dbmodels.Video
 	for rows.Next() {
 		var video dbmodels.Video
-		if err := rows.Scan(&video.ID, &video.ChannelID, &video.URL, &video.SegmentStart, &video.SegmentEnd); err != nil {
+		if err := rows.Scan(&video.ID, &video.ChannelID, &video.URL, &video.SectionStart, &video.SectionEnd); err != nil {
 			return nil, err
 		}
 		videos = append(videos, video)
@@ -56,7 +56,7 @@ func (r *videoRepository) GetVideosByChannelID(channelID int) ([]dbmodels.Video,
 
 func (r *videoRepository) FetchNextVideo(videoID int, channelID int) (*dbmodels.Video, error) {
 	row := r.db.QueryRow(`
-		SELECT id, channel_id, url, segment_start, segment_end
+		SELECT id, channel_id, url, section_start, section_end
 		FROM videos
 		WHERE channel_id = ? AND id > ?
 		ORDER BY id ASC
@@ -64,18 +64,18 @@ func (r *videoRepository) FetchNextVideo(videoID int, channelID int) (*dbmodels.
 	`, channelID, videoID)
 
 	var video dbmodels.Video
-	err := row.Scan(&video.ID, &video.ChannelID, &video.URL, &video.SegmentStart, &video.SegmentEnd)
+	err := row.Scan(&video.ID, &video.ChannelID, &video.URL, &video.SectionStart, &video.SectionEnd)
 	if err == sql.ErrNoRows {
 		// If no next video is found, get the first video instead
 		row = r.db.QueryRow(`
-			SELECT id, channel_id, url, segment_start, segment_end
+			SELECT id, channel_id, url, section_start, section_end
 			FROM videos
 			WHERE channel_id = ?
 			ORDER BY id ASC
 			LIMIT 1
 		`, channelID)
 
-		err = row.Scan(&video.ID, &video.ChannelID, &video.URL, &video.SegmentStart, &video.SegmentEnd)
+		err = row.Scan(&video.ID, &video.ChannelID, &video.URL, &video.SectionStart, &video.SectionEnd)
 		if err != nil {
 			return nil, err
 		}
@@ -86,16 +86,16 @@ func (r *videoRepository) FetchNextVideo(videoID int, channelID int) (*dbmodels.
 	return &video, nil
 }
 
-func (r *videoRepository) SaveVideo(tx *sql.Tx, channelID int, videoUrl string, segmentStart int, segmentEnd int) error {
+func (r *videoRepository) SaveVideo(tx *sql.Tx, channelID int, videoUrl string, sectionStart int, sectionEnd int) error {
 	exec := r.db.Exec
 	if tx != nil {
 		exec = tx.Exec
 	}
 
 	_, err := exec(`
-		INSERT INTO videos (channel_id, url, segment_start, segment_end)
+		INSERT INTO videos (channel_id, url, section_start, section_end)
 		VALUES (?, ?, ?, ?)
-	`, channelID, videoUrl, segmentStart, segmentEnd)
+	`, channelID, videoUrl, sectionStart, sectionEnd)
 
 	return err
 }

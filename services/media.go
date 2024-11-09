@@ -44,7 +44,7 @@ func (s *MediaService) GetCurrentVideoByChannelId(channelId int) (*dbmodels.Vide
 
 	totalLength := int64(0)
 	for _, video := range videos {
-		totalLength += int64(video.SegmentEnd - video.SegmentStart)
+		totalLength += int64(video.SectionEnd - video.SectionStart)
 	}
 
 	currentPoint := time.Now().UTC().Unix() % totalLength
@@ -52,14 +52,14 @@ func (s *MediaService) GetCurrentVideoByChannelId(channelId int) (*dbmodels.Vide
 
 	for i := range videos {
 		video := &videos[i]
-		segmentLength := int64(video.SegmentEnd - video.SegmentStart)
+		sectionLength := int64(video.SectionEnd - video.SectionStart)
 
-		if currentPoint < segmentLength {
+		if currentPoint < sectionLength {
 			videoIndex = i
-			video.SegmentStart += int(currentPoint) // Adjust start to match the current second
+			video.SectionStart += int(currentPoint) // Adjust start to match the current second
 			break
 		}
-		currentPoint -= segmentLength
+		currentPoint -= sectionLength
 	}
 
 	if videoIndex == -1 {
@@ -151,7 +151,7 @@ func (s *MediaService) SubmitList(list jsonmodels.SubmitListRequestJson) (bool, 
 			return false, err
 		}
 		for _, video := range channel.Videos {
-			err = s.VideoRepo.SaveVideo(tx, channelID, video.Url, video.SegmentStart, video.SegmentEnd)
+			err = s.VideoRepo.SaveVideo(tx, channelID, video.Url, video.SectionStart, video.SectionEnd)
 			if err != nil {
 				return false, err
 			}

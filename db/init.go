@@ -14,11 +14,11 @@ func createTables(db *sql.DB) error {
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
 		"channel_id" INTEGER NOT NULL,
 		"url" TEXT NOT NULL,
-		"segment_start" INTEGER NOT NULL,
-		"segment_end" INTEGER NOT NULL,
+		"section_start" INTEGER NOT NULL,
+		"section_end" INTEGER NOT NULL,
 		UNIQUE(url, channel_id),
 		FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
-		CHECK (segment_end > segment_start)
+		CHECK (section_end > section_start)
 	);`
 	createChannelsTableQuery := `CREATE TABLE IF NOT EXISTS channels (
 		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +61,7 @@ func populateDatabase(db *sql.DB) error {
 	}
 
 	insertChannelQuery := `INSERT OR IGNORE INTO channels (name) VALUES (?)`
-	insertVideoQuery := `INSERT OR IGNORE INTO videos (channel_id, url, segment_start, segment_end) VALUES (?, ?, ?, ?)`
+	insertVideoQuery := `INSERT OR IGNORE INTO videos (channel_id, url, section_start, section_end) VALUES (?, ?, ?, ?)`
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -84,7 +84,7 @@ func populateDatabase(db *sql.DB) error {
 		}
 
 		for _, video := range channel.Videos {
-			_, err = tx.Exec(insertVideoQuery, channelID, video.Url, video.SegmentStart, video.SegmentEnd)
+			_, err = tx.Exec(insertVideoQuery, channelID, video.Url, video.SectionStart, video.SectionEnd)
 			if err != nil {
 				log.Fatal(err)
 				return err
