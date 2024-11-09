@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/ozencb/couchtube/config"
 	"github.com/ozencb/couchtube/db"
 	"github.com/ozencb/couchtube/handlers"
 
@@ -52,6 +53,8 @@ func main() {
 	}
 	registerRoutes(http.DefaultServeMux, routes)
 
-	log.Println("Server starting on port 8081...")
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	port := config.GetPort()
+
+	log.Println("Server starting on port", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

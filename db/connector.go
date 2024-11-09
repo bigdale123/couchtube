@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/ozencb/couchtube/config"
 	_ "modernc.org/sqlite"
 )
 
@@ -19,7 +20,7 @@ var (
 func GetDbConnection() (*sql.DB, error) {
 	var err error
 	once.Do(func() {
-		dbFilePath := "couchtube.db"
+		dbFilePath := config.GetDBFilePath()
 
 		// Create the database file if it doesn't exist
 		if _, err = os.Stat(dbFilePath); os.IsNotExist(err) {
