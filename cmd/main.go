@@ -8,18 +8,25 @@ import (
 	"github.com/ozencb/couchtube/db"
 	"github.com/ozencb/couchtube/handlers"
 
+	"github.com/ozencb/couchtube/middleware"
 	repo "github.com/ozencb/couchtube/repositories"
 	"github.com/ozencb/couchtube/services"
 )
 
 type Route struct {
-	Path    string
-	Handler http.HandlerFunc
+	Path     string
+	Handler  http.HandlerFunc
+	Readonly bool
 }
 
 func registerRoutes(mux *http.ServeMux, routes []Route) {
 	for _, route := range routes {
 		handler := route.Handler
+
+		if route.Readonly {
+			handler = middleware.ReadOnlyGuard(handler)
+		}
+
 		mux.Handle(route.Path, handler)
 	}
 }
@@ -44,12 +51,14 @@ func main() {
 	// Initialize Handlers with services
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 
+	readonlyEnabled := config.GetReadonlyMode()
+
 	routes := []Route{
-		{Path: "/", Handler: http.FileServer(http.Dir("./static")).ServeHTTP},
-		{Path: "/channels", Handler: mediaHandler.FetchAllChannels},
-		{Path: "/current-video", Handler: mediaHandler.GetCurrentVideo},
-		{Path: "/submit-list", Handler: mediaHandler.SubmitList},
-		{Path: "/invalidate-video", Handler: mediaHandler.InvalidateVideo},
+		{Path: "/", Handler: http.FileServer(http.Dir("./static")).ServeHTTP, Readonly: false},
+		{Path: "/channels", Handler: mediaHandler.FetchAllChannels, Readonly: false},
+		{Path: "/current-video", Handler: mediaHandler.GetCurrentVideo, Readonly: false},
+		{Path: "/submit-list", Handler: mediaHandler.SubmitList, Readonly: readonlyEnabled},
+		{Path: "/invalidate-video", Handler: mediaHandler.InvalidateVideo, Readonly: readonlyEnabled},
 	}
 	registerRoutes(http.DefaultServeMux, routes)
 
